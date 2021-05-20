@@ -60,8 +60,55 @@ def battleMenu(trainer, target):
 
 
 def attackTurn(trainer, wildPokemon):
-    # def canAttack(pokemon, target, move):
+    def canAttack(pokemon, target, move):
+        nvStatus = pokemon.getNonVolatileStatus()
+        vStatus = pokemon.getVolatileStatus()
+        print(vStatus)
+        mAccuracy = move.getAccuracy()
+        pAccuracy = pokemon.getBattleStats()["accuracy"]
+        pEvasion = pokemon.getBattleStats()["evasion"]
 
+        for pkmType in target.getTypes():
+            if move.getType().getName() == pkmType.getNoDamageFrom():
+                canAttackOutput = {"attack": False, "message": "This move doesn't affect the target", "before": False}
+
+        if not mAccuracy:
+            mAccuracy = 100
+        if pAccuracy >= 0:
+            t = mAccuracy * ((3 + pAccuracy) / 3)
+        else:
+            t = mAccuracy * (3 / (3 + abs(pAccuracy)))
+        if pEvasion > 0:
+            t *= (3 / (3 + pEvasion))
+        else:
+            t *= ((3 + abs(pEvasion)) / 3)
+        if random.randint(1, 100) <= round(t):
+            canAttackOutput = {"attack": True, "message": "", "before": False}
+        else:
+            canAttackOutput = {"attack": False, "message": pokemon.getName() + " missed", "before": False}
+
+        if nvStatus["PAR"]:
+            canAttackOutput = {"attack": False, "message": pokemon.getName() + " is paralyzed and can't move", "before": True}
+        elif nvStatus["SLP"] != -1:
+            if nvStatus["SLP"] > 0:
+                canAttackOutput = {"attack": False, "message": pokemon.getName() + " is fast asleep", "before": True}
+                nvStatus["SLP"] -= 1
+            else:
+                canAttackOutput = {"attack": True, "message": pokemon.getName() + " woke up!", "before": True}
+                nvStatus["SLP"] -= 1
+        elif nvStatus["FRZ"] != -1:
+            if nvStatus["FRZ"] > 0:
+                canAttackOutput = {"attack": False, "message": pokemon.getName() + " if frozen solid", "before": True}
+                nvStatus["FRZ"] -= 1
+            else:
+                canAttackOutput = {"attack": True, "message": pokemon.getName() + " broke free!", "before": True}
+        elif vStatus["flinch"]:
+            canAttackOutput = {"attack": False, "message": pokemon.getName() + " flinched", "before": False}
+            vStatus["flinch"] = False
+
+        pokemon.setVolatileStatus(vStatus)
+        pokemon.setNonVolatileStatus(nvStatus)
+        return canAttackOutput
 
     trainerAction = battleMenu(trainer, wildPokemon)
     while trainerAction["displayMenu"]:
@@ -74,13 +121,12 @@ def attackTurn(trainer, wildPokemon):
         return -1
     elif trainerAction["move"]:
         trainerPokemon = trainer.getCarryPokemonList()[0]
-        if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
-            canAttack(trainerPokemon, wildPokemon, trainerAction["move"])
+        # if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
+        print(canAttack(trainerPokemon, wildPokemon, trainerAction["move"]))
 
 
 def wildBattle(trainer):
     wildPokemon = Pokemon(random.randint(1, 500), 100)
     print(trainer.getName(), "uses", trainer.getCarryPokemonList()[0].getName())
-
-
-    wildPokemonMove = wildPokemon.getMoves()["move" + str(random.randint(1, 4))]
+    while True:
+        attackTurn(trainer, wildPokemon)

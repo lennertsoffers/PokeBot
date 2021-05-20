@@ -21,11 +21,11 @@ def chooseStarter():
 
 
 newTrainer = createTrainer()
-newTrainer.addPokemon(Pokemon(1, 1))
-newTrainer.addPokemon(Pokemon(2, 1))
-newTrainer.addPokemon(Pokemon(3, 1))
-newTrainer.addPokemon(Pokemon(4, 1))
-newTrainer.addPokemon(Pokemon(5, 1))
+# newTrainer.addPokemon(Pokemon(1, 1))
+# newTrainer.addPokemon(Pokemon(2, 1))
+# newTrainer.addPokemon(Pokemon(3, 1))
+# newTrainer.addPokemon(Pokemon(4, 1))
+# newTrainer.addPokemon(Pokemon(5, 1))
 for PKM in newTrainer.getPokemonList():
     newTrainer.depositCarryPokemon(newTrainer.getPokemonList()[PKM])
 wildBattle(newTrainer)
