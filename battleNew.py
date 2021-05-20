@@ -124,7 +124,6 @@ def attackTurn(trainer, wildPokemon):
 
         def typeMultiplier(moveType, targetTypes):
             multiplierOutput = {"multiplier": 1, "text": ""}
-            print(moveType)
             for pkmType in targetTypes:
                 if moveType in pkmType.getHalfDamageFrom() and multiplierOutput["multiplier"] != 0.5:
                     multiplierOutput["multiplier"] *= 0.5
@@ -146,6 +145,22 @@ def attackTurn(trainer, wildPokemon):
                 "typeMultiplierText": tMultiplier["text"]
                 }
 
+    def calculateAmountOfHits(move):
+        if not move.getMultiHitType() == "single":
+            if move.getMultiHitType() == "double":
+                return 2
+            else:
+                randHit = random.randint(1, 100)
+                if randHit <= 35:
+                    return 2
+                elif randHit <= 70:
+                    return 3
+                elif randHit <= 85:
+                    return 4
+                else:
+                    return 5
+        return 1
+
     trainerAction = battleMenu(trainer, wildPokemon)
     while trainerAction["displayMenu"]:
         trainerAction = battleMenu(trainer, wildPokemon)
@@ -158,8 +173,19 @@ def attackTurn(trainer, wildPokemon):
     elif trainerAction["move"]:
         trainerPokemon = trainer.getCarryPokemonList()[0]
         # if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
-        attackHit(trainerPokemon, wildPokemon, trainerAction["move"])
-        print(calculateMultiplier(trainerPokemon, wildPokemon, trainerAction["move"]))
+        hitCount = calculateAmountOfHits(trainerAction["move"])
+        effectiveHits = 1
+        stopHit = False
+        while effectiveHits <= hitCount and not stopHit:
+            moveHits = attackHit(trainerPokemon, wildPokemon, trainerAction["move"])
+            if moveHits["attack"]:
+                calculateMultiplier(trainerPokemon, wildPokemon, trainerAction["move"])
+                effectiveHits += 1
+            else:
+                stopHit = True
+                print(moveHits["message"])
+        if hitCount > 1:
+            print(f"it hit {effectiveHits - 1} times")
 
 
 def wildBattle(trainer):
