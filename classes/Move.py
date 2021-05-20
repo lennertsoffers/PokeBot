@@ -29,7 +29,6 @@ class Move:
             elif ailment == "confusion":
                 ailmentName = "confusion"
         self.ailment = {"name": ailmentName, "chance": ailmentChance}
-
         self.criticalRate = data["meta"]["crit_rate"]
         self.pp = data["pp"]
         self.power = data["power"]

@@ -13,7 +13,7 @@ def createTrainer():
 
 
 def chooseStarter():
-    choice = "sandshrew"
+    choice = "magnemite"
     # choice = input("Choose your starter: ").lower()
     # while choice not in ["charmander", "bulbasaur", "squirtle", "rotom", "1", "4", "7"]:
     #     choice = input("Choose your starter: ").lower()
@@ -22,11 +22,11 @@ def chooseStarter():
 
 
 newTrainer = createTrainer()
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+# newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+# newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+# newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+# newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+# newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
 for PKM in newTrainer.getPokemonList():
     newTrainer.depositCarryPokemon(newTrainer.getPokemonList()[PKM])
 wildBattle(newTrainer)
