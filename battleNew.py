@@ -60,10 +60,9 @@ def battleMenu(trainer, target):
 
 
 def attackTurn(trainer, wildPokemon):
-    def canAttack(pokemon, target, move):
+    def attackHit(pokemon, target, move):
         nvStatus = pokemon.getNonVolatileStatus()
         vStatus = pokemon.getVolatileStatus()
-        print(vStatus)
         mAccuracy = move.getAccuracy()
         pAccuracy = pokemon.getBattleStats()["accuracy"]
         pEvasion = pokemon.getBattleStats()["evasion"]
@@ -110,6 +109,43 @@ def attackTurn(trainer, wildPokemon):
         pokemon.setNonVolatileStatus(nvStatus)
         return canAttackOutput
 
+    def calculateMultiplier(pokemon, target, move):
+        def isCriticalHit(critRate):
+            if critRate == 0:
+                return random.randint(0, 100) <= 6
+            elif critRate == 1:
+                return random.randint(0, 100) <= 13
+            elif critRate == 2:
+                return random.randint(0, 100) <= 25
+            elif critRate == 3:
+                return random.randint(0, 100) <= 33
+            else:
+                return random.randint(0, 100) <= 50
+
+        def typeMultiplier(moveType, targetTypes):
+            multiplierOutput = {"multiplier": 1, "text": ""}
+            print(moveType)
+            for pkmType in targetTypes:
+                if moveType in pkmType.getHalfDamageFrom() and multiplierOutput["multiplier"] != 0.5:
+                    multiplierOutput["multiplier"] *= 0.5
+                    multiplierOutput["text"] = "it was not very effective"
+                if moveType in pkmType.getDoubleDamageFrom() and multiplierOutput["multiplier"] != 2:
+                    multiplierOutput["multiplier"] *= 2
+                    multiplierOutput["text"] = "it was very effective"
+            return multiplierOutput
+
+        tMultiplier = typeMultiplier(move.getType().getName(), target.getTypes())
+        tMultiplierAction = tMultiplier["multiplier"] != 1
+        crit = False
+        if isCriticalHit(pokemon.getBattleStats()["criticalHitRate"]):
+            crit = True
+            tMultiplier["multiplier"] *= 2
+        return {"multiplier": round(tMultiplier["multiplier"]),
+                "crit": crit,
+                "typeMultiplier": tMultiplierAction,
+                "typeMultiplierText": tMultiplier["text"]
+                }
+
     trainerAction = battleMenu(trainer, wildPokemon)
     while trainerAction["displayMenu"]:
         trainerAction = battleMenu(trainer, wildPokemon)
@@ -122,7 +158,8 @@ def attackTurn(trainer, wildPokemon):
     elif trainerAction["move"]:
         trainerPokemon = trainer.getCarryPokemonList()[0]
         # if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
-        print(canAttack(trainerPokemon, wildPokemon, trainerAction["move"]))
+        attackHit(trainerPokemon, wildPokemon, trainerAction["move"])
+        print(calculateMultiplier(trainerPokemon, wildPokemon, trainerAction["move"]))
 
 
 def wildBattle(trainer):
