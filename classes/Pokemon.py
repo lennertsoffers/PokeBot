@@ -51,15 +51,15 @@ class Pokemon:
         self.inBattleStats = {"attack": 0, "defense": 0, "special-attack": 0, "special-defense": 0, "speed": 0, "accuracy": 0, "evasion": 0, "criticalHitRate": 0}
         self.nonVolatileStatus = {
             "BRN": False,
-            "FRZ": False,
+            "FRZ": -1,
             "PAR": False,
             "PSN": False,
-            "SLP": False
+            "SLP": -1
         }
         self.volatileStatus = {
             "bound": False,
             "cantEscape": False,
-            "confusion": False,
+            "confusion": 0,
             "curse": False,
             "flinch": False,
             "encore": False,
@@ -209,3 +209,11 @@ class Pokemon:
     def getNonVolatileStatus(self):
         return self.nonVolatileStatus
 
+    def getVolatileStatus(self):
+        return self.volatileStatus
+
+    def setNonVolatileStatus(self, statusDict):
+        self.nonVolatileStatus = statusDict
+
+    def setVolatileStatus(self, statusDict):
+        self.volatileStatus = statusDict
