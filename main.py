@@ -1,6 +1,7 @@
 from PokeBot.classes.Pokemon import Pokemon
 from PokeBot.classes.Trainer import Trainer
 from PokeBot.battleNew import wildBattle
+import random
 
 
 # Create trainer and starter pokemon
@@ -21,11 +22,11 @@ def chooseStarter():
 
 
 newTrainer = createTrainer()
-# newTrainer.addPokemon(Pokemon(1, 1))
-# newTrainer.addPokemon(Pokemon(2, 1))
-# newTrainer.addPokemon(Pokemon(3, 1))
-# newTrainer.addPokemon(Pokemon(4, 1))
-# newTrainer.addPokemon(Pokemon(5, 1))
+newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
+newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
 for PKM in newTrainer.getPokemonList():
     newTrainer.depositCarryPokemon(newTrainer.getPokemonList()[PKM])
 wildBattle(newTrainer)

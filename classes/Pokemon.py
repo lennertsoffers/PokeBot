@@ -59,7 +59,7 @@ class Pokemon:
         self.volatileStatus = {
             "bound": False,
             "cantEscape": False,
-            "confusion": 0,
+            "confusion": -1,
             "curse": False,
             "flinch": False,
             "encore": False,
