@@ -33,6 +33,10 @@ def battleMenu(trainer, target):
         "displayMenu": False
     }
     print("|------------------------------|")
+    print(f"| {trainer.getCarryPokemonList()[0].getName().ljust(10)}"
+          f"     {str(trainer.getCarryPokemonList()[0].getHp()).ljust(14)}|")
+    print(f"| {target.getName().ljust(10)}     {str(target.getHp()).ljust(14)}|")
+    print("|------------------------------|")
     print("| 1: Fight                     |")
     print("| 2: Run                       |")
     print("| 3: Pokemon                   |")
@@ -52,7 +56,7 @@ def battleMenu(trainer, target):
     elif action == "3":
         menuOutput["switch"] = True
         printPokemons(trainer)
-        trainer.switchCarryPokemon((int(input("| first pokemon: ")) - 1), (int(input("| second pokemon: ")) - 1))
+        trainer.switchCarryPokemon(0, (int(input("| pokemon: ")) - 1))
         printPokemons(trainer)
     elif action == "4":
         menuOutput["useItem"] = True
@@ -66,11 +70,10 @@ def attackTurn(trainer, wildPokemon):
         mAccuracy = move.getAccuracy()
         pAccuracy = pokemon.getBattleStats()["accuracy"]
         pEvasion = pokemon.getBattleStats()["evasion"]
-
+        canAttackOutput = {"attack": True, "message": "", "before": False}
         for pkmType in target.getTypes():
             if move.getType().getName() == pkmType.getNoDamageFrom():
                 canAttackOutput = {"attack": False, "message": "This move doesn't affect the target", "before": False}
-
         if not mAccuracy:
             mAccuracy = 100
         if pAccuracy >= 0:
@@ -81,11 +84,8 @@ def attackTurn(trainer, wildPokemon):
             t *= (3 / (3 + pEvasion))
         else:
             t *= ((3 + abs(pEvasion)) / 3)
-        if random.randint(1, 100) <= round(t):
-            canAttackOutput = {"attack": True, "message": "", "before": False}
-        else:
+        if random.randint(1, 100) > round(t):
             canAttackOutput = {"attack": False, "message": pokemon.getName() + " missed", "before": False}
-
         if nvStatus["PAR"]:
             canAttackOutput = {"attack": False, "message": pokemon.getName() + " is paralyzed and can't move", "before": True}
         elif nvStatus["SLP"] != -1:
@@ -125,7 +125,7 @@ def attackTurn(trainer, wildPokemon):
                     return 5
         return 1
 
-    def calculateDamage(pokemon, target, move):
+    def calculateDamage(pokemon, target, move, basicDamageCalculation):
         def calculateStat(value, inBattleStat):
             if inBattleStat >= 0:
                 value *= ((2 + inBattleStat) / 2)
@@ -177,14 +177,58 @@ def attackTurn(trainer, wildPokemon):
             else:
                 a = calculateStat(pokemon.getStat("special-attack").getStatValue(), pokemon.getBattleStats()["special-attack"])
                 d = calculateStat(target.getStat("special-defense").getStatValue(), target.getBattleStats()["special-defense"])
-            damage = round((((((2 * pokemon.getLevel()) / 5) + 2) * move.getPower() * (a / d)) / 50) * multiplierDict["multiplier"])
+            if basicDamageCalculation:
+                damage = round(((((2 * pokemon.getLevel()) / 5) + 2) * 40 * (a / d)) / 50)
+            else:
+                damage = round((((((2 * pokemon.getLevel()) / 5) + 2) * move.getPower() * (a / d)) / 50) * multiplierDict["multiplier"])
         else:
             damage = 0
-        if multiplierDict["crit"]:
+        if multiplierDict["crit"] and not basicDamageCalculation:
             print("a critical hit")
-        if multiplierDict["typeMultiplier"]:
+        if multiplierDict["typeMultiplier"] and not basicDamageCalculation:
             print(multiplierDict["typeMultiplierText"])
         print(f"damage: {damage}")
+        return damage
+
+    def moveHitLoop(pokemon, target, move):
+        hitCount = calculateAmountOfHits(move)
+        effectiveHits = 1
+        stopHit = False
+        while effectiveHits <= hitCount and not stopHit:
+            moveHits = attackHit(pokemon, target, move)
+            if moveHits["attack"]:
+                target.lowerHp(calculateDamage(pokemon, target, move, False))
+                effectiveHits += 1
+            else:
+                stopHit = True
+                print(moveHits["message"])
+        if hitCount > 1:
+            print(f"it hit {effectiveHits - 1} times")
+
+    def moveHit(pokemon, target, move):
+        volatileStatus = pokemon.getVolatileStatus()
+        if volatileStatus["confusion"] != -1:
+            if volatileStatus["confusion"] == 0:
+                print(f"{pokemon.getName()} snapped out of confusion")
+                print(f"{pokemon.getName()} uses {move.getName()}")
+                moveHitLoop(pokemon, target, move)
+            else:
+                pokemon.setVolatileStatus(volatileStatus)
+                print(f"{pokemon.getName()} is confused")
+                if random.randint(1, 100) <= 50:
+                    print(f"{pokemon.getName()} uses {move.getName()}")
+                    moveHitLoop(pokemon, target, move)
+                else:
+                    print(f"{pokemon.getName()} hurt itself in its confusion")
+                    pokemon.lowerHp(calculateDamage(pokemon, pokemon, move, True))
+            volatileStatus["confusion"] -= 1
+        else:
+            print(f"{pokemon.getName()} uses {move.getName()}")
+            moveHitLoop(pokemon, target, move)
+        if target.getHp() == 0:
+            print(f"{target.getName()} fainted")
+        if pokemon.getHp() == 0:
+            print(f"{pokemon.getName()} fainted")
 
     trainerAction = battleMenu(trainer, wildPokemon)
     while trainerAction["displayMenu"]:
@@ -194,28 +238,27 @@ def attackTurn(trainer, wildPokemon):
         return -1
     elif trainerAction["useItem"]:
         print("Use item")
-        return -1
+        moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+    elif trainerAction["switch"]:
+        moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
     elif trainerAction["move"]:
         trainerPokemon = trainer.getCarryPokemonList()[0]
-        # if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
-        hitCount = calculateAmountOfHits(trainerAction["move"])
-        effectiveHits = 1
-        stopHit = False
-        while effectiveHits <= hitCount and not stopHit:
-            moveHits = attackHit(trainerPokemon, wildPokemon, trainerAction["move"])
-            if moveHits["attack"]:
-                calculateDamage(trainerPokemon, wildPokemon, trainerAction["move"])
-                effectiveHits += 1
-            else:
-                stopHit = True
-                print(moveHits["message"])
-        if hitCount > 1:
-            print(f"it hit {effectiveHits - 1} times")
+        if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
+            moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
+            if wildPokemon.getHp() > 0:
+                moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+        else:
+            moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+            if trainerPokemon.getHp() > 0:
+                moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
 
 
 def wildBattle(trainer):
     wildPokemon = Pokemon(random.randint(1, 500), 30)
-    print(f"Wildpokemon: {wildPokemon.getName()}")
+    print(f"WildPokemon: {wildPokemon.getName()}")
     print(trainer.getName(), "uses", trainer.getCarryPokemonList()[0].getName())
-    while True:
+    while wildPokemon.getHp() > 0 and trainer.getCarryPokemonList()[0].getHp() > 0:
         attackTurn(trainer, wildPokemon)
+
+# -- BUGS -- #
+# Switch to fainted pokemons
