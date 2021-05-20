@@ -109,42 +109,6 @@ def attackTurn(trainer, wildPokemon):
         pokemon.setNonVolatileStatus(nvStatus)
         return canAttackOutput
 
-    def calculateMultiplier(pokemon, target, move):
-        def isCriticalHit(critRate):
-            if critRate == 0:
-                return random.randint(0, 100) <= 6
-            elif critRate == 1:
-                return random.randint(0, 100) <= 13
-            elif critRate == 2:
-                return random.randint(0, 100) <= 25
-            elif critRate == 3:
-                return random.randint(0, 100) <= 33
-            else:
-                return random.randint(0, 100) <= 50
-
-        def typeMultiplier(moveType, targetTypes):
-            multiplierOutput = {"multiplier": 1, "text": ""}
-            for pkmType in targetTypes:
-                if moveType in pkmType.getHalfDamageFrom() and multiplierOutput["multiplier"] != 0.5:
-                    multiplierOutput["multiplier"] *= 0.5
-                    multiplierOutput["text"] = "it was not very effective"
-                if moveType in pkmType.getDoubleDamageFrom() and multiplierOutput["multiplier"] != 2:
-                    multiplierOutput["multiplier"] *= 2
-                    multiplierOutput["text"] = "it was very effective"
-            return multiplierOutput
-
-        tMultiplier = typeMultiplier(move.getType().getName(), target.getTypes())
-        tMultiplierAction = tMultiplier["multiplier"] != 1
-        crit = False
-        if isCriticalHit(pokemon.getBattleStats()["criticalHitRate"]):
-            crit = True
-            tMultiplier["multiplier"] *= 2
-        return {"multiplier": round(tMultiplier["multiplier"]),
-                "crit": crit,
-                "typeMultiplier": tMultiplierAction,
-                "typeMultiplierText": tMultiplier["text"]
-                }
-
     def calculateAmountOfHits(move):
         if not move.getMultiHitType() == "single":
             if move.getMultiHitType() == "double":
@@ -160,6 +124,67 @@ def attackTurn(trainer, wildPokemon):
                 else:
                     return 5
         return 1
+
+    def calculateDamage(pokemon, target, move):
+        def calculateStat(value, inBattleStat):
+            if inBattleStat >= 0:
+                value *= ((2 + inBattleStat) / 2)
+            else:
+                value *= (2 / (2 + abs(inBattleStat)))
+            return value
+
+        def calculateMultiplier(pkm, tar, mov):
+            def isCriticalHit(critRate):
+                if critRate == 0:
+                    return random.randint(0, 100) <= 6
+                elif critRate == 1:
+                    return random.randint(0, 100) <= 13
+                elif critRate == 2:
+                    return random.randint(0, 100) <= 25
+                elif critRate == 3:
+                    return random.randint(0, 100) <= 33
+                else:
+                    return random.randint(0, 100) <= 50
+
+            def typeMultiplier(moveType, targetTypes):
+                multiplierOutput = {"multiplier": 1, "text": ""}
+                for pkmType in targetTypes:
+                    if moveType in pkmType.getHalfDamageFrom() and multiplierOutput["multiplier"] != 0.5:
+                        multiplierOutput["multiplier"] *= 0.5
+                        multiplierOutput["text"] = "it was not very effective"
+                    if moveType in pkmType.getDoubleDamageFrom() and multiplierOutput["multiplier"] != 2:
+                        multiplierOutput["multiplier"] *= 2
+                        multiplierOutput["text"] = "it was very effective"
+                return multiplierOutput
+
+            tMultiplier = typeMultiplier(mov.getType().getName(), tar.getTypes())
+            tMultiplierAction = tMultiplier["multiplier"] != 1
+            crit = False
+            if isCriticalHit(pkm.getBattleStats()["criticalHitRate"]):
+                crit = True
+                tMultiplier["multiplier"] *= 2
+            return {"multiplier": round(tMultiplier["multiplier"]),
+                    "crit": crit,
+                    "typeMultiplier": tMultiplierAction,
+                    "typeMultiplierText": tMultiplier["text"]
+                    }
+
+        multiplierDict = calculateMultiplier(pokemon, target, move)
+        if move.getPower():
+            if move.getDamageClass() == "physical":
+                a = calculateStat(pokemon.getStat("attack").getStatValue(), pokemon.getBattleStats()["attack"])
+                d = calculateStat(target.getStat("defense").getStatValue(), target.getBattleStats()["defense"])
+            else:
+                a = calculateStat(pokemon.getStat("special-attack").getStatValue(), pokemon.getBattleStats()["special-attack"])
+                d = calculateStat(target.getStat("special-defense").getStatValue(), target.getBattleStats()["special-defense"])
+            damage = round((((((2 * pokemon.getLevel()) / 5) + 2) * move.getPower() * (a / d)) / 50) * multiplierDict["multiplier"])
+        else:
+            damage = 0
+        if multiplierDict["crit"]:
+            print("a critical hit")
+        if multiplierDict["typeMultiplier"]:
+            print(multiplierDict["typeMultiplierText"])
+        print(f"damage: {damage}")
 
     trainerAction = battleMenu(trainer, wildPokemon)
     while trainerAction["displayMenu"]:
@@ -179,7 +204,7 @@ def attackTurn(trainer, wildPokemon):
         while effectiveHits <= hitCount and not stopHit:
             moveHits = attackHit(trainerPokemon, wildPokemon, trainerAction["move"])
             if moveHits["attack"]:
-                calculateMultiplier(trainerPokemon, wildPokemon, trainerAction["move"])
+                calculateDamage(trainerPokemon, wildPokemon, trainerAction["move"])
                 effectiveHits += 1
             else:
                 stopHit = True
@@ -189,7 +214,8 @@ def attackTurn(trainer, wildPokemon):
 
 
 def wildBattle(trainer):
-    wildPokemon = Pokemon(random.randint(1, 500), 100)
+    wildPokemon = Pokemon(random.randint(1, 500), 30)
+    print(f"Wildpokemon: {wildPokemon.getName()}")
     print(trainer.getName(), "uses", trainer.getCarryPokemonList()[0].getName())
     while True:
         attackTurn(trainer, wildPokemon)
