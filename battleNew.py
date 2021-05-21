@@ -186,9 +186,10 @@ def calculateDamage(pokemon, target, move, basicDamageCalculation):
         damage = 0
     if multiplierDict["crit"] and not basicDamageCalculation:
         print("a critical hit")
-    if multiplierDict["typeMultiplier"] and not basicDamageCalculation:
+    if multiplierDict["typeMultiplier"] and not basicDamageCalculation and damage != 0:
         print(multiplierDict["typeMultiplierText"])
-    print(f"damage: {damage}")
+    if damage != 0:
+        print(f"damage: {damage}")
     return damage
 
 
@@ -233,7 +234,7 @@ def statChanges(move, pokemon, target, damage):
     if move.getDrain() != 0:
         pokemon.addHp(round(damage * (move.getDrain() / 100)))
     for statChange in move.getStatChanges():
-        if -6 < pokemonInBattleStats[statChange["name"]] < 6 and -6 < targetBattleStats[statChange["name"]] < 6:
+        if statChange["name"] != "hp" and -6 < pokemonInBattleStats[statChange["name"]] < 6 and -6 < targetBattleStats[statChange["name"]] < 6:
             if statChange["change"] == 1:
                 pokemonInBattleStats[statChange["name"]] += statChange["change"]
                 print(f"{pokemon.getName()}'s {statChange['name']} rose!")
@@ -262,16 +263,28 @@ def moveHitLoop(pokemon, target, move):
     hitCount = calculateAmountOfHits(move)
     effectiveHits = 1
     stopHit = False
+    moveHits = attackHit(pokemon, target, move)
     while effectiveHits <= hitCount and not stopHit:
-        moveHits = attackHit(pokemon, target, move)
         if moveHits["attack"]:
+            if moveHits["before"] and moveHits["message"] != "":
+                print(moveHits["message"])
+            if effectiveHits == 1:
+                print(f"{pokemon.getName()} uses {move.getName()}")
+            if not moveHits["before"] and moveHits["message"] != "":
+                print(moveHits["message"])
             damage = calculateDamage(pokemon, target, move, False)
             target.lowerHp(damage)
             statChanges(move, pokemon, target, damage)
             effectiveHits += 1
+            moveHits = attackHit(pokemon, target, move)
         else:
             stopHit = True
-            print(moveHits["message"])
+            if moveHits["before"] and moveHits["message"] != "":
+                print(moveHits["message"])
+            if effectiveHits == 1 and not moveHits["before"]:
+                print(f"{pokemon.getName()} uses {move.getName()}")
+            if not moveHits["before"] and moveHits["message"] != "":
+                print(moveHits["message"])
     if hitCount > 1:
         print(f"it hit {effectiveHits - 1} times")
 
@@ -281,20 +294,17 @@ def moveHit(pokemon, target, move):
     if volatileStatus["confusion"] != -1:
         if volatileStatus["confusion"] == 0:
             print(f"{pokemon.getName()} snapped out of confusion")
-            print(f"{pokemon.getName()} uses {move.getName()}")
             moveHitLoop(pokemon, target, move)
         else:
             pokemon.setVolatileStatus(volatileStatus)
             print(f"{pokemon.getName()} is confused")
             if random.randint(1, 100) <= 50:
-                print(f"{pokemon.getName()} uses {move.getName()}")
                 moveHitLoop(pokemon, target, move)
             else:
                 print(f"{pokemon.getName()} hurt itself in its confusion")
                 pokemon.lowerHp(calculateDamage(pokemon, pokemon, move, True))
         volatileStatus["confusion"] -= 1
     else:
-        print(f"{pokemon.getName()} uses {move.getName()}")
         moveHitLoop(pokemon, target, move)
     if target.getHp() == 0:
         print(f"{target.getName()} fainted")

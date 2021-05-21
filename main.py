@@ -13,7 +13,7 @@ def createTrainer():
 
 
 def chooseStarter():
-    choice = "magnemite"
+    choice = "sandshrew"
     # choice = input("Choose your starter: ").lower()
     # while choice not in ["charmander", "bulbasaur", "squirtle", "rotom", "1", "4", "7"]:
     #     choice = input("Choose your starter: ").lower()
