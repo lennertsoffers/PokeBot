@@ -17,7 +17,7 @@ def moveMenu(trainer):
     return moves["move" + str(moveIndex)]
 
 
-def battleMenu(trainer, target):
+def switchPokemon(trainer):
     def printPokemons(trainerToPrint):
         carryPokemonIndex = 1
         for carryPokemon in trainerToPrint.getCarryPokemonList():
@@ -25,6 +25,13 @@ def battleMenu(trainer, target):
                   + carryPokemon.getName().ljust(15) + str(carryPokemon.getHp()).ljust(11) + "|")
             carryPokemonIndex += 1
 
+    printPokemons(trainer)
+    while not trainer.switchCarryPokemon(0, (int(input("| pokemon: ")) - 1)):
+        pass
+    printPokemons(trainer)
+
+
+def battleMenu(trainer, target):
     menuOutput = {
         "move": None,
         "run": False,
@@ -55,9 +62,7 @@ def battleMenu(trainer, target):
             menuOutput["run"] = True
     elif action == "3":
         menuOutput["switch"] = True
-        printPokemons(trainer)
-        trainer.switchCarryPokemon(0, (int(input("| pokemon: ")) - 1))
-        printPokemons(trainer)
+        switchPokemon(trainer)
     elif action == "4":
         menuOutput["useItem"] = True
     return menuOutput
@@ -306,8 +311,17 @@ def moveHit(pokemon, target, move):
         volatileStatus["confusion"] -= 1
     else:
         moveHitLoop(pokemon, target, move)
-    if target.getHp() == 0:
-        print(f"{target.getName()} fainted")
+
+
+def trainerPokemonFainted(trainer):
+    currentPokemon = trainer.getCarryPokemonList()[0]
+    if currentPokemon.getHp() == 0:
+        print(f"{currentPokemon.getName()} fainted")
+        if 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()):
+            switchPokemon(trainer)
+
+
+def wildPokemonFainted(pokemon):
     if pokemon.getHp() == 0:
         print(f"{pokemon.getName()} fainted")
 
@@ -322,25 +336,31 @@ def wildAttackTurn(trainer, wildPokemon):
     elif trainerAction["useItem"]:
         print("Use item")
         moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+        trainerPokemonFainted(trainer)
     elif trainerAction["switch"]:
         moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+        trainerPokemonFainted(trainer)
     elif trainerAction["move"]:
         trainerPokemon = trainer.getCarryPokemonList()[0]
         if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
             moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
+            wildPokemonFainted(wildPokemon)
             if wildPokemon.getHp() > 0:
                 moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+                trainerPokemonFainted(trainer)
         else:
             moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+            trainerPokemonFainted(trainer)
             if trainerPokemon.getHp() > 0:
                 moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
+                wildPokemonFainted(wildPokemon)
 
 
 def wildBattle(trainer):
     wildPokemon = Pokemon(random.randint(1, 500), 30)
     print(f"WildPokemon: {wildPokemon.getName()}")
     print(trainer.getName(), "uses", trainer.getCarryPokemonList()[0].getName())
-    while wildPokemon.getHp() > 0 and trainer.getCarryPokemonList()[0].getHp() > 0:
+    while wildPokemon.getHp() > 0 and 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()):
         wildAttackTurn(trainer, wildPokemon)
 
 
@@ -350,4 +370,3 @@ def playerBattle(players):
 
 # -- BUGS -- #
 # Switch to fainted pokemons
-# moveHit(): print(... use ...) before of after moveHitLoop
