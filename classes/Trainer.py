@@ -19,7 +19,10 @@ class Trainer:
         return self.carryPokemonList
 
     def switchCarryPokemon(self, pokemon1, pokemon2):
-        self.carryPokemonList[pokemon1], self.carryPokemonList[pokemon2] = self.carryPokemonList[pokemon2], self.carryPokemonList[pokemon1]
+        if self.carryPokemonList[pokemon2].getHp() > 0:
+            self.carryPokemonList[pokemon1], self.carryPokemonList[pokemon2] = self.carryPokemonList[pokemon2], self.carryPokemonList[pokemon1]
+            return True
+        return False
 
     def depositCarryPokemon(self, pokemon):
         if len(self.carryPokemonList) < 6:
