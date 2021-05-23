@@ -1,6 +1,7 @@
 from PokeBot.classes.Pokemon import Pokemon
 from PokeBot.classes.Trainer import Trainer
 from PokeBot.battleNew import wildBattle
+from PokeBot.battleNew import playerBattle
 import random
 
 
@@ -21,24 +22,24 @@ def chooseStarter():
     return starter
 
 
-newTrainer = createTrainer()
-pkm2 = Pokemon(random.randint(1, 500), 30)
-newTrainer.addPokemon(pkm2)
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
-newTrainer.addPokemon(Pokemon(random.randint(1, 500), 30))
-for PKM in newTrainer.getPokemonList():
-    newTrainer.depositCarryPokemon(newTrainer.getPokemonList()[PKM])
-wildBattle(newTrainer)
-# newTrainer.addPokemon(Pokemon(random.randint(10, 500)))
-# for PKM in newTrainer.getPokemonList():
-#     print(newTrainer.getPokemonList()[PKM].getName())
-# selectedPokemon = newTrainer.getPokemonList()[input("Pokemon: ")]
-# action = input("action: ")
-# while action == "" and selectedPokemon.getHp() > 0:
-#     wildBattle(selectedPokemon)
-#     action = input("action: ")
+trainer1 = createTrainer()
+trainer1.setName("trainer1")
+trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
+# trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
+# trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
+# trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
+# trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
+for PKM in trainer1.getPokemonList():
+    trainer1.depositCarryPokemon(trainer1.getPokemonList()[PKM])
 
+trainer2 = createTrainer()
+trainer2.setName("trainer2")
+trainer2.addPokemon(Pokemon(random.randint(1, 500), 30))
+# trainer2.addPokemon(Pokemon(random.randint(1, 500), 30))
+# trainer2.addPokemon(Pokemon(random.randint(1, 500), 30))
+# trainer2.addPokemon(Pokemon(random.randint(1, 500), 30))
+# trainer2.addPokemon(Pokemon(random.randint(1, 500), 30))
+for PKM in trainer2.getPokemonList():
+    trainer2.depositCarryPokemon(trainer2.getPokemonList()[PKM])
 
-
+playerBattle([trainer1, trainer2])

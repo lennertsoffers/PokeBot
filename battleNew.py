@@ -39,6 +39,7 @@ def battleMenu(trainer, target, trainerBattle):
         "useItem": False,
         "displayMenu": False
     }
+    print()
     print("|------------------------------|")
     print(f"| {trainer.getCarryPokemonList()[0].getName().ljust(10)}"
           f"     {str(trainer.getCarryPokemonList()[0].getHp()).ljust(14)}|")
@@ -52,11 +53,13 @@ def battleMenu(trainer, target, trainerBattle):
     action = input("| > ")
     while action not in ["1", "2", "3", "4"]:
         action = input("| > ")
+    print()
     if action == "1":
         menuOutput["move"] = moveMenu(trainer)
     elif action == "2":
         if trainerBattle:
             print("| Can't flee trainer battle    |")
+            menuOutput["displayMenu"] = True
         else:
             if trainer.getCarryPokemonList()[0].getStat("speed").getStatValue() < target.getStat("speed").getStatValue():
                 print("| Cannot escape                |")
@@ -360,9 +363,46 @@ def wildAttackTurn(trainer, wildPokemon):
 
 
 def playerAttackTurn(trainer1, trainer2):
-    trainerAction1 = battleMenu(trainer1, trainer2.getCarryPokemonList()[0], True)
-    while trainerAction1["displayMenu"]:
-        trainerAction1 = battleMenu(trainer1, trainer2.getCarryPokemonList()[0], True)
+    def activeTrainerAction(activeTrainer, inactiveTrainer):
+        action = battleMenu(activeTrainer, inactiveTrainer.getCarryPokemonList()[0], True)
+        while action["displayMenu"]:
+            action = battleMenu(activeTrainer, inactiveTrainer.getCarryPokemonList()[0], True)
+        if action["useItem"]:
+            print("Use item")
+            return False
+        elif action["move"]:
+            return action["move"]
+    trainerTurns = {"trainer1": activeTrainerAction(trainer1, trainer2),
+                    "trainer2": activeTrainerAction(trainer2, trainer1)}
+    trainerPokemons = {"trainer1": trainer1.getCarryPokemonList()[0],
+                       "trainer2": trainer2.getCarryPokemonList()[0]}
+    if trainerTurns["trainer1"] and trainerTurns["trainer2"]:
+        if trainerPokemons["trainer1"].getStat("speed").getStatValue() > trainerPokemons["trainer2"].getStat("speed").getStatValue():
+            moveHit(trainerPokemons["trainer1"], trainerPokemons["trainer2"], trainerTurns["trainer1"])
+            trainerPokemonFainted(trainer2)
+            if trainerPokemons["trainer2"].getHp() > 0:
+                moveHit(trainerPokemons["trainer2"], trainerPokemons["trainer1"], trainerTurns["trainer2"])
+                trainerPokemonFainted(trainer1)
+        else:
+            moveHit(trainerPokemons["trainer2"], trainerPokemons["trainer1"], trainerTurns["trainer2"])
+            trainerPokemonFainted(trainer1)
+            if trainerPokemons["trainer1"].getHp() > 0:
+                moveHit(trainerPokemons["trainer1"], trainerPokemons["trainer2"], trainerTurns["trainer1"])
+                trainerPokemonFainted(trainer2)
+    else:
+        for trainerTurn in trainerTurns:
+            if trainerTurn == "trainer1":
+                active = "trainer1"
+                inactive = "trainer2"
+            else:
+                active = "trainer2"
+                inactive = "trainer1"
+            if trainerTurns[active]:
+                moveHit(trainerPokemons[active], trainerPokemons[inactive], trainerTurns[active])
+                if active == "trainer1":
+                    trainerPokemonFainted(trainer1)
+                else:
+                    trainerPokemonFainted(trainer2)
 
 
 def wildBattle(trainer):
@@ -376,6 +416,8 @@ def wildBattle(trainer):
 def playerBattle(players):
     for player in players:
         print(player.getName(), "uses", player.getCarryPokemonList()[0].getName())
+    while 0 < any(pkm.getHp() for pkm in players[0].getCarryPokemonList()) and 0 < any(pkm.getHp() for pkm in players[1].getCarryPokemonList()):
+        playerAttackTurn(players[0], players[1])
 
 # -- BUGS -- #
-# Switch to fainted pokemons
+# PSN & BRN damage after attack
