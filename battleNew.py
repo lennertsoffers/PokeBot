@@ -31,7 +31,7 @@ def switchPokemon(trainer):
     printPokemons(trainer)
 
 
-def battleMenu(trainer, target):
+def battleMenu(trainer, target, trainerBattle):
     menuOutput = {
         "move": None,
         "run": False,
@@ -55,11 +55,14 @@ def battleMenu(trainer, target):
     if action == "1":
         menuOutput["move"] = moveMenu(trainer)
     elif action == "2":
-        if trainer.getCarryPokemonList()[0].getStat("speed").getStatValue() < target.getStat("speed").getStatValue():
-            print("| Cannot escape                |")
-            menuOutput["displayMenu"] = True
+        if trainerBattle:
+            print("| Can't flee trainer battle    |")
         else:
-            menuOutput["run"] = True
+            if trainer.getCarryPokemonList()[0].getStat("speed").getStatValue() < target.getStat("speed").getStatValue():
+                print("| Cannot escape                |")
+                menuOutput["displayMenu"] = True
+            else:
+                menuOutput["run"] = True
     elif action == "3":
         menuOutput["switch"] = True
         switchPokemon(trainer)
@@ -327,9 +330,9 @@ def wildPokemonFainted(pokemon):
 
 
 def wildAttackTurn(trainer, wildPokemon):
-    trainerAction = battleMenu(trainer, wildPokemon)
+    trainerAction = battleMenu(trainer, wildPokemon, False)
     while trainerAction["displayMenu"]:
-        trainerAction = battleMenu(trainer, wildPokemon)
+        trainerAction = battleMenu(trainer, wildPokemon, False)
     if trainerAction["run"]:
         print("Got away safely")
         return -1
@@ -354,6 +357,12 @@ def wildAttackTurn(trainer, wildPokemon):
             if trainerPokemon.getHp() > 0:
                 moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
                 wildPokemonFainted(wildPokemon)
+
+
+def playerAttackTurn(trainer1, trainer2):
+    trainerAction1 = battleMenu(trainer1, trainer2.getCarryPokemonList()[0], True)
+    while trainerAction1["displayMenu"]:
+        trainerAction1 = battleMenu(trainer1, trainer2.getCarryPokemonList()[0], True)
 
 
 def wildBattle(trainer):
