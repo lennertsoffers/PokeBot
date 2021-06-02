@@ -1,10 +1,10 @@
 import requests
 import json
 import random
-from PokeBot.classes.Specie import Specie
-from PokeBot.classes.Stat import Stat
-from PokeBot.classes.Move import Move
-from PokeBot.classes.Type import Type
+from classes.Specie import Specie
+from classes.Stat import Stat
+from classes.Move import Move
+from classes.Type import Type
 
 
 class Pokemon:
@@ -50,10 +50,10 @@ class Pokemon:
             self.typeList.append(Type(data["types"][pokemonTypeIndex]["type"]["name"]))
         self.inBattleStats = {"attack": 0, "defense": 0, "special-attack": 0, "special-defense": 0, "speed": 0, "accuracy": 0, "evasion": 0, "criticalHitRate": 0}
         self.nonVolatileStatus = {
-            "BRN": False,
+            "BRN": 0,
             "FRZ": False,
             "PAR": False,
-            "PSN": False,
+            "PSN": 0,
             "SLP": -1
         }
         self.volatileStatus = {
