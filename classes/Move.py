@@ -1,6 +1,6 @@
 import requests
 import json
-from PokeBot.classes.Type import Type
+from classes.Type import Type
 
 
 class Move:

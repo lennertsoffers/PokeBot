@@ -1,6 +1,6 @@
 import random
-from PokeBot.classes.Pokemon import Pokemon
-
+from classes.Pokemon import Pokemon
+import math
 
 def moveMenu(trainer):
     moves = trainer.getCarryPokemonList()[0].getMoves()
@@ -215,17 +215,17 @@ def statChanges(move, pokemon, target, damage):
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
                 targetNonVolatileStatus[ailment["name"]] = True
                 print(target.getName(), "is paralyzed and may be unable to move")
-        elif ailment["name"] == "BRN" and not targetNonVolatileStatus["BRN"]:
+        elif ailment["name"] == "BRN" and not targetNonVolatileStatus["BRN"] > 0:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
-                targetNonVolatileStatus[ailment["name"]] = True
+                targetNonVolatileStatus[ailment["name"]] = calculateBrnPsnDamage(pokemon)
                 print(target.getName(), "is burned")
         elif ailment["name"] == "FRZ" and not targetNonVolatileStatus["FRZ"]:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
                 targetNonVolatileStatus[ailment["name"]] = True
                 print(target.getName(), "is frozen")
-        elif ailment["name"] == "PSN" and not targetNonVolatileStatus["PSN"]:
+        elif ailment["name"] == "PSN" and not targetNonVolatileStatus["PSN"] > 0:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
-                targetNonVolatileStatus[ailment["name"]] = True
+                targetNonVolatileStatus[ailment["name"]] = calculateBrnPsnDamage(target)
                 print(target.getName(), "was badly poisoned")
         elif ailment["name"] == "SLP" and targetNonVolatileStatus["SLP"] == -1:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
@@ -268,6 +268,29 @@ def statChanges(move, pokemon, target, damage):
             print("nothing happened!")
         pokemon.setBattleStats(pokemonInBattleStats)
         target.setBattleStats(targetBattleStats)
+
+
+def calculateBrnPsnDamage(pokemon, previousValue=0):
+    newValue = previousValue + (pokemon.getStat('hp').getStatValue() / 8)
+    if newValue > 15 * math.floor(pokemon.getStat('hp').getStatValue() / 16):
+        newValue = 15 * math.floor(pokemon.getStat('hp').getStatValue() / 16)
+    if newValue < 1:
+        newValue = 1
+    return round(newValue)
+
+
+def lowerAfterTurnDamage(pokemon):
+    def lowerNonVolatileStatus(pkm, status, statusLong):
+        print(pokemon.getName(), "got hurt by", statusLong)
+        pokemon.lowerHp(nonVolatileStatus[status])
+        nonVolatileStatus[status] = calculateBrnPsnDamage(pkm, nonVolatileStatus[status])
+        pokemon.setNonVolatileStatus(nonVolatileStatus)
+
+    nonVolatileStatus = pokemon.getNonVolatileStatus()
+    if nonVolatileStatus["PSN"] > 0:
+        lowerNonVolatileStatus(pokemon, "PSN", "poison")
+    if nonVolatileStatus["BRN"] > 0:
+        lowerNonVolatileStatus(pokemon, "BRN", "burn")
 
 
 def moveHitLoop(pokemon, target, move):
@@ -317,19 +340,27 @@ def moveHit(pokemon, target, move):
         volatileStatus["confusion"] -= 1
     else:
         moveHitLoop(pokemon, target, move)
+    if pokemon.getHp() > 0:
+        lowerAfterTurnDamage(pokemon)
 
 
-def trainerPokemonFainted(trainer):
+def wildPokemonFainted(trainer, pokemon):
     currentPokemon = trainer.getCarryPokemonList()[0]
     if currentPokemon.getHp() == 0:
         print(f"{currentPokemon.getName()} fainted")
         if 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()):
             switchPokemon(trainer)
-
-
-def wildPokemonFainted(pokemon):
     if pokemon.getHp() == 0:
         print(f"{pokemon.getName()} fainted")
+
+
+def playerPokemonFainted(trainers):
+    for trainer in trainers:
+        currentPokemon = trainer.getCarryPokemonList()[0]
+        if currentPokemon.getHp() == 0:
+            print(f"{currentPokemon.getName()} fainted")
+            if 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()):
+                switchPokemon(trainer)
 
 
 def wildAttackTurn(trainer, wildPokemon):
@@ -342,24 +373,24 @@ def wildAttackTurn(trainer, wildPokemon):
     elif trainerAction["useItem"]:
         print("Use item")
         moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
-        trainerPokemonFainted(trainer)
+        wildPokemonFainted(trainer, wildPokemon)
     elif trainerAction["switch"]:
         moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
-        trainerPokemonFainted(trainer)
+        wildPokemonFainted(trainer, wildPokemon)
     elif trainerAction["move"]:
         trainerPokemon = trainer.getCarryPokemonList()[0]
         if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
             moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
-            wildPokemonFainted(wildPokemon)
-            if wildPokemon.getHp() > 0:
+            wildPokemonFainted(trainer, wildPokemon)
+            if all(pkm.getHp() for pkm in [trainerPokemon, wildPokemon]) > 0:
                 moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
-                trainerPokemonFainted(trainer)
+                wildPokemonFainted(trainer, wildPokemon)
         else:
             moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
-            trainerPokemonFainted(trainer)
-            if trainerPokemon.getHp() > 0:
+            wildPokemonFainted(trainer, wildPokemon)
+            if all(pkm.getHp() for pkm in [trainerPokemon, wildPokemon]) > 0:
                 moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
-                wildPokemonFainted(wildPokemon)
+                wildPokemonFainted(trainer, wildPokemon)
 
 
 def playerAttackTurn(trainer1, trainer2):
@@ -372,6 +403,7 @@ def playerAttackTurn(trainer1, trainer2):
             return False
         elif action["move"]:
             return action["move"]
+
     trainerTurns = {"trainer1": activeTrainerAction(trainer1, trainer2),
                     "trainer2": activeTrainerAction(trainer2, trainer1)}
     trainerPokemons = {"trainer1": trainer1.getCarryPokemonList()[0],
@@ -379,16 +411,16 @@ def playerAttackTurn(trainer1, trainer2):
     if trainerTurns["trainer1"] and trainerTurns["trainer2"]:
         if trainerPokemons["trainer1"].getStat("speed").getStatValue() > trainerPokemons["trainer2"].getStat("speed").getStatValue():
             moveHit(trainerPokemons["trainer1"], trainerPokemons["trainer2"], trainerTurns["trainer1"])
-            trainerPokemonFainted(trainer2)
-            if trainerPokemons["trainer2"].getHp() > 0:
+            playerPokemonFainted([trainer1, trainer2])
+            if all(trainerPokemons[trainerPokemon].getHp() for trainerPokemon in trainerPokemons) > 0:
                 moveHit(trainerPokemons["trainer2"], trainerPokemons["trainer1"], trainerTurns["trainer2"])
-                trainerPokemonFainted(trainer1)
+                playerPokemonFainted([trainer1, trainer2])
         else:
             moveHit(trainerPokemons["trainer2"], trainerPokemons["trainer1"], trainerTurns["trainer2"])
-            trainerPokemonFainted(trainer1)
-            if trainerPokemons["trainer1"].getHp() > 0:
+            playerPokemonFainted([trainer1, trainer2])
+            if all(trainerPokemons[trainerPokemon].getHp() for trainerPokemon in trainerPokemons) > 0:
                 moveHit(trainerPokemons["trainer1"], trainerPokemons["trainer2"], trainerTurns["trainer1"])
-                trainerPokemonFainted(trainer2)
+                playerPokemonFainted([trainer1, trainer2])
     else:
         for trainerTurn in trainerTurns:
             if trainerTurn == "trainer1":
@@ -400,9 +432,9 @@ def playerAttackTurn(trainer1, trainer2):
             if trainerTurns[active]:
                 moveHit(trainerPokemons[active], trainerPokemons[inactive], trainerTurns[active])
                 if active == "trainer1":
-                    trainerPokemonFainted(trainer1)
+                    playerPokemonFainted([trainer1, trainer2])
                 else:
-                    trainerPokemonFainted(trainer2)
+                    playerPokemonFainted([trainer1, trainer2])
 
 
 def wildBattle(trainer):
@@ -420,4 +452,4 @@ def playerBattle(players):
         playerAttackTurn(players[0], players[1])
 
 # -- BUGS -- #
-# PSN & BRN damage after attack
+
