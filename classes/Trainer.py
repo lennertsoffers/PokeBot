@@ -1,10 +1,11 @@
 
 class Trainer:
-    def __init__(self, name=None):
+    def __init__(self, discordId, name=None):
         self.name = name
         self.pokemonList = {}
         self.carryPokemonList = []
         self.inventoryList = []
+        self.discordId = discordId
 
     def getName(self):
         return self.name
@@ -35,3 +36,9 @@ class Trainer:
 
     def addPokemon(self, pokemon):
         self.pokemonList.update({pokemon.getName(): pokemon})
+
+    def getDiscordId(self):
+        return self.discordId
+
+    def setDiscordId(self, identifier):
+        self.discordId = identifier
