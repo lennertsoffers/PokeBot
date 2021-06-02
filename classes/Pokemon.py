@@ -8,7 +8,7 @@ from classes.Type import Type
 
 
 class Pokemon:
-    def __init__(self, identifier, level=-1):
+    def __init__(self, identifier, level=1):
         data = json.loads(str(requests.get(f"https://pokeapi.co/api/v2/pokemon/{identifier}").text))
         self.id = data["id"]
         self.name = data["name"]
