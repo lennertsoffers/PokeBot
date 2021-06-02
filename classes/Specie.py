@@ -1,5 +1,6 @@
 import requests
 import json
+import re
 
 
 class Specie:
@@ -11,6 +12,7 @@ class Specie:
         self.isMythical = data["is_mythical"]
         self.hatchCounter = data["hatch_counter"]
         self.growthRate = data["growth_rate"]
+        self.flavorText = data["flavor_text_entries"][0]["flavor_text"].replace('\n', ' ').replace('\f', ' ')
 
     def getGenderRate(self):
         return self.genderRate
@@ -29,3 +31,6 @@ class Specie:
 
     def getGrowthRate(self):
         return self.growthRate
+
+    def getFlavorText(self):
+        return self.flavorText
