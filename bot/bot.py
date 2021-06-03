@@ -18,8 +18,8 @@ async def on_ready():
     print("Ready to go")
 
 
-@client.command(aliases=["np", "newPlayer", "newplayer"])
-async def new_player(ctx):
+@client.command(aliases=["np", "newPlayer", "newplayer", "n"])
+async def new_player(ctx, name=None):
     def check(*reacts):
         if reacts[0].count > 1:
             return True
@@ -45,9 +45,8 @@ async def new_player(ctx):
         await ctx.send(embed=starterPokemonEmbed)
     choiceEmbed.set_footer(text="_"*90)
     choiceMessage = await ctx.send(embed=choiceEmbed)
-    await choiceMessage.add_reaction(emoji=choiceList[0])
-    await choiceMessage.add_reaction(emoji=choiceList[1])
-    await choiceMessage.add_reaction(emoji=choiceList[2])
+    for i in range(len(starterPokemonNameList)):
+        await choiceMessage.add_reaction(emoji=choiceList[i])
     try:
         await client.wait_for('reaction_add', check=check, timeout=120)
         choiceMessageNew = await ctx.channel.fetch_message(choiceMessage.id)
@@ -55,25 +54,22 @@ async def new_player(ctx):
         for i in range(len(choiceMessageNew.reactions)):
             if choiceMessageNew.reactions[i].count > 1:
                 starterId = i
-        trainer = Trainer(ctx.message.author.id, ctx.message.author.name)
-        trainer.addPokemon(Pokemon(starterPokemonNameList[starterId], level=5))
-        trainer.depositCarryPokemon(trainer.getPokemonList()[starterPokemonNameList[starterId]])
+        trainerName = name
+        if trainerName is None:
+            trainerName = ctx.message.author.name
+        trainer = Trainer(ctx.message.author.id, trainerName)
+        starter = Pokemon(starterPokemonNameList[starterId], level=5)
+        trainer.addPokemon(starter)
         trainerList.append({ctx.message.author.id: trainer})
-        print(f'Hello {trainer.getName()}')
-        print(f'your starter is {trainer.getCarryPokemonList()[0].getName()}')
-        print(trainerList)
+        trainerCreationSuccessEmbed = discord.Embed(title=f"Welcome to the world of pokemon {trainer.getName()}",
+                                                    description="Congratulations with your first Pokemon. We wish you success on your journey to become a pokemon master",
+                                                    color=0x45ba36)
+        trainerCreationSuccessEmbed.set_image(url=f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{starter.getId()}.png")
+        await ctx.send(embed=trainerCreationSuccessEmbed)
     except asyncio.TimeoutError:
         trainerCreationFailEmbed = discord.Embed(title="Failed to create trainer!", description="You didn't choose a starter pokemon.", color=0x45ba36)
         trainerCreationFailEmbed.set_footer(text="_"*90)
         await ctx.send(embed=trainerCreationFailEmbed)
-
-
-@client.command(aliases=["Test", "t"])
-async def test(ctx):
-    channel1 = client.get_channel(831259742352703521)
-    new_players = discord.utils.get(ctx.guild.channels, name='new-players')
-    await channel1.send('test1')
-    await new_players.send('new-players')
 
 
 client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.-3J4fgmva3h_4k1h7fOxGtsxskg")
