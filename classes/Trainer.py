@@ -2,7 +2,7 @@
 class Trainer:
     def __init__(self, discordId, name=None):
         self.name = name
-        self.pokemonList = {}
+        self.pokemonList = []
         self.carryPokemonList = []
         self.inventoryList = []
         self.discordId = discordId
@@ -27,7 +27,13 @@ class Trainer:
 
     def depositCarryPokemon(self, pokemon):
         if len(self.carryPokemonList) < 6:
-            self.carryPokemonList.append(pokemon)
+            if pokemon in self.pokemonList:
+                if pokemon not in self.carryPokemonList:
+                    self.carryPokemonList.append(pokemon)
+                else:
+                    print("This pokemon is already in your party")
+            else:
+                print("You don't have this pokemon")
         else:
             print("You carry already 6 pokemon")
 
@@ -35,7 +41,9 @@ class Trainer:
         return self.inventoryList
 
     def addPokemon(self, pokemon):
-        self.pokemonList.update({pokemon.getName(): pokemon})
+        self.pokemonList.append(pokemon)
+        if len(self.carryPokemonList) < 6:
+            self.carryPokemonList.append(pokemon)
 
     def getDiscordId(self):
         return self.discordId
