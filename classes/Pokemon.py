@@ -18,6 +18,10 @@ class Pokemon:
         else:
             self.level = level
         self.shiny = random.randint(1, 8192) == 1
+        if self.shiny:
+            self.sprite = f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/{self.id}.png"
+        else:
+            self.sprite = f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{self.id}.png"
         self.baseExperience = data["base_experience"]
         self.totalExperience = self.calculateTotalXp(self.level, self.specie.getGrowthRate())
         self.nextLevelExperience = self.calculateTotalXp(self.level + 1, self.specie.getGrowthRate())
@@ -220,3 +224,6 @@ class Pokemon:
 
     def isShiny(self):
         return self.shiny
+
+    def getSprite(self):
+        return self.sprite
