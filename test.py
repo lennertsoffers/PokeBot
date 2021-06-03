@@ -1,7 +1,7 @@
 from classes.Pokemon import Pokemon
 from classes.Trainer import Trainer
-from battle.battleNew import wildBattle
-from battle.battleNew import playerBattle
+from battle.battle import wildBattle
+from battle.battle import playerBattle
 
 trainer = Trainer(discordId=1, name='test')
 pokemon = Pokemon(identifier=1, level=5)

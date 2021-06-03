@@ -1,8 +1,8 @@
 from classes.Pokemon import Pokemon
 from classes.Trainer import Trainer
-from battleNew import wildBattle
-from battleNew import playerBattle
+from battle import battleDiscord
 import random
+import asyncio
 
 
 # Create trainer and starter pokemon
@@ -28,8 +28,6 @@ trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
 # trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
 # trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
 # trainer1.addPokemon(Pokemon(random.randint(1, 500), 30))
-for PKM in trainer1.getPokemonList():
-    trainer1.depositCarryPokemon(trainer1.getPokemonList()[PKM])
 
 # trainer2 = createTrainer()
 # trainer2.addPokemon(Pokemon(random.randint(1, 500), 30))
@@ -40,4 +38,4 @@ for PKM in trainer1.getPokemonList():
 # for PKM in trainer2.getPokemonList():
 #     trainer2.depositCarryPokemon(trainer2.getPokemonList()[PKM])
 
-wildBattle(trainer1)
+battleDiscord.wildBattle(trainer1)
