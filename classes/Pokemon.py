@@ -17,7 +17,7 @@ class Pokemon:
             self.level = random.randint(1, 100)
         else:
             self.level = level
-
+        self.shiny = random.randint(1, 8192) == 1
         self.baseExperience = data["base_experience"]
         self.totalExperience = self.calculateTotalXp(self.level, self.specie.getGrowthRate())
         self.nextLevelExperience = self.calculateTotalXp(self.level + 1, self.specie.getGrowthRate())
@@ -217,3 +217,6 @@ class Pokemon:
 
     def setVolatileStatus(self, statusDict):
         self.volatileStatus = statusDict
+
+    def isShiny(self):
+        return self.shiny
