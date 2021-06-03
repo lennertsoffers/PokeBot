@@ -9,6 +9,9 @@ import random
 
 client = commands.Bot(command_prefix="_")
 
+# Global variables
+trainerList = []
+
 
 @client.event
 async def on_ready():
@@ -46,22 +49,23 @@ async def new_player(ctx):
     await choiceMessage.add_reaction(emoji=choiceList[1])
     await choiceMessage.add_reaction(emoji=choiceList[2])
     try:
-        await client.wait_for('reaction_add', check=check)
+        await client.wait_for('reaction_add', check=check, timeout=120)
+        choiceMessageNew = await ctx.channel.fetch_message(choiceMessage.id)
         starterId = None
-        print(get(choiceMessage.reactions))
-        print(len(choiceMessage.reactions))
-        for i in range(len(choiceMessage.reactions)):
-            print("in for")
-            if choiceMessage.reactions[i].count > 1:
+        for i in range(len(choiceMessageNew.reactions)):
+            if choiceMessageNew.reactions[i].count > 1:
                 starterId = i
-        print(starterId)
         trainer = Trainer(ctx.message.author.id, ctx.message.author.name)
         trainer.addPokemon(Pokemon(starterPokemonNameList[starterId], level=5))
-        trainer.depositCarryPokemon(trainer.getPokemonList()[0])
+        trainer.depositCarryPokemon(trainer.getPokemonList()[starterPokemonNameList[starterId]])
+        trainerList.append({ctx.message.author.id: trainer})
         print(f'Hello {trainer.getName()}')
         print(f'your starter is {trainer.getCarryPokemonList()[0].getName()}')
+        print(trainerList)
     except asyncio.TimeoutError:
-        print('timeout')
+        trainerCreationFailEmbed = discord.Embed(title="Failed to create trainer!", description="You didn't choose a starter pokemon.", color=0x45ba36)
+        trainerCreationFailEmbed.set_footer(text="_"*90)
+        await ctx.send(embed=trainerCreationFailEmbed)
 
 
 @client.command(aliases=["Test", "t"])
@@ -73,5 +77,3 @@ async def test(ctx):
 
 
 client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.-3J4fgmva3h_4k1h7fOxGtsxskg")
-
-# get reacions on message
