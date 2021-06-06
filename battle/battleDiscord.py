@@ -26,7 +26,7 @@ async def getDamageEmbed(d, p, ctx):
     embed = discord.Embed(title=f"{p.getName()} got {d} damage", description=f"HP: {getHpInHearts(p)} {p.getHp()}", color=0x45ba36)
     embed.set_thumbnail(url=p.getSprite())
     await ctx.send(embed=embed)
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
     global messages
     messages += 1
 
@@ -35,7 +35,7 @@ async def sendMessageEmbed(message, ctx):
     embed = discord.Embed(title=message, description="\u200b", color=0x45ba36)
     embed.set_footer(text="_" * 90)
     await ctx.send(embed=embed)
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
     global messages
     messages += 1
 
@@ -43,15 +43,29 @@ async def sendMessageEmbed(message, ctx):
 async def useMoveEmbed(m, p, ctx):
     embed = discord.Embed(title=f"{p.getName()} uses {m.getName()}", description="\u200b", color=0x45ba36)
     await ctx.send(embed=embed)
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
     global messages
     messages += 1
+
+
+async def getPokemonEmbed(ctx, textBefore="", *args):
+    for pokemon in args:
+        embed = discord.Embed(title=textBefore + pokemon.getName(), description=f"HP: {getHpInHearts(pokemon)}", color=0x45ba36)
+        embed.add_field(name="Level:", value=pokemon.getLevel(), inline=True)
+        embed.add_field(name="Exp:", value=pokemon.getNextLevelExperience(), inline=True)
+        # if statusEffect != "":
+        #     embed.add_field(name="Status", value=statusEffect)
+        embed.set_thumbnail(url=pokemon.getSprite())
+        await ctx.send(embed=embed)
+        global messages
+        messages += 1
 
 
 async def switchPokemon(trainer, ctx, client):
     switchPokemonEmbed = discord.Embed(title="Your party", description="Choose a pokemon to switch your party leader with", color=0x45ba36)
     choiceSwitchPokemonEmbed = discord.Embed(title="Choose a pokemon to switch", description="\u200b", color=0x45ba36)
     await ctx.send(embed=switchPokemonEmbed)
+    global messages
     carryPokemonList = trainer.getCarryPokemonList()
 
     async def createPartyPokemonEmbeds(pokemon, reaction, infoAfterName=""):
@@ -59,6 +73,8 @@ async def switchPokemon(trainer, ctx, client):
         partyPokemonEmbed = discord.Embed(title=pokemon.getName() + infoAfterName, description=f"HP: {hpString} {pokemon.getHp()}", color=0x45ba36)
         partyPokemonEmbed.set_thumbnail(url=pokemon.getSprite())
         await ctx.send(embed=partyPokemonEmbed)
+        global messages
+        messages += 1
         choiceSwitchPokemonEmbed.add_field(name=reaction + " " + pokemon.getName(), value="\u200b", inline=True)
 
     await createPartyPokemonEmbeds(carryPokemonList[0], reactionList[0], " (party leader)")
@@ -66,6 +82,7 @@ async def switchPokemon(trainer, ctx, client):
         await createPartyPokemonEmbeds(carryPokemonList[pokemonIndex], reactionList[pokemonIndex])
     choiceSwitchPokemonEmbed.set_footer(text="_" * 90)
     choiceSwitchMessage = await ctx.send(embed=choiceSwitchPokemonEmbed)
+    messages += 2
     for i in range(len(carryPokemonList)):
         await choiceSwitchMessage.add_reaction(emoji=reactionList[i])
     try:
@@ -82,6 +99,7 @@ async def switchPokemon(trainer, ctx, client):
         trainerCreationFailEmbed = discord.Embed(title="Failed to switch pokemon!", description="You didn't choose a pokemon to switch.", color=0x45ba36)
         trainerCreationFailEmbed.set_footer(text="_"*90)
         await ctx.send(embed=trainerCreationFailEmbed)
+        messages += 1
         return False
 
 
@@ -100,6 +118,8 @@ async def battleMenu(trainer, target, trainerBattle, ctx, client):
         actionMenuEmbed.add_field(name=reactionList[i] + " " + actionList[i].capitalize(), value="\u200b", inline=True)
     actionMenuEmbed.set_footer(text="_"*90)
     actionMenuEmbedMessage = await ctx.send(embed=actionMenuEmbed)
+    global messages
+    messages += 2
     for i in range(len(actionList)):
         await actionMenuEmbedMessage.add_reaction(emoji=reactionList[i])
     try:
@@ -294,42 +314,43 @@ def calculateDamage(pokemon, target, move, basicDamageCalculation):
     return calculateDamageOutput
 
 
-async def statChanges(move, pokemon, target, damage):
+async def statChanges(move, pokemon, target, damage, ctx):
     pokemonInBattleStats = pokemon.getBattleStats()
     targetBattleStats = target.getBattleStats()
     targetNonVolatileStatus = target.getNonVolatileStatus()
     targetVolatileStatus = target.getVolatileStatus()
     ailment = move.getAilment()
+    messageEmbedList = []
     if ailment["name"] != "-1":
         if ailment["name"] == "PAR" and not targetNonVolatileStatus["PAR"]:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
                 targetNonVolatileStatus[ailment["name"]] = True
-                print(target.getName(), "is paralyzed and may be unable to move")
+                messageEmbedList.append(discord.Embed(title="PAR", description=f"{target.getName()} is paralyzed and may be unable to move", color=0x45ba36))
         elif ailment["name"] == "BRN" and not targetNonVolatileStatus["BRN"] > 0:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
                 targetNonVolatileStatus[ailment["name"]] = calculateBrnPsnDamage(pokemon)
-                print(target.getName(), "is burned")
+                messageEmbedList.append(discord.Embed(title="BRN", description=f"{target.getName()} is burned", color=0x45ba36))
         elif ailment["name"] == "FRZ" and not targetNonVolatileStatus["FRZ"]:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
                 targetNonVolatileStatus[ailment["name"]] = True
-                print(target.getName(), "is frozen")
+                messageEmbedList.append(discord.Embed(title="FRZ", description=f"{target.getName()} is frozen", color=0x45ba36))
         elif ailment["name"] == "PSN" and not targetNonVolatileStatus["PSN"] > 0:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
                 targetNonVolatileStatus[ailment["name"]] = calculateBrnPsnDamage(target)
-                print(target.getName(), "was badly poisoned")
+                messageEmbedList.append(discord.Embed(title="PSN", description=f"{target.getName()} was badly poisoned", color=0x45ba36))
         elif ailment["name"] == "SLP" and targetNonVolatileStatus["SLP"] == -1:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
                 targetNonVolatileStatus[ailment["name"]] = random.randint(2, 5)
-                print(target.getName(), "is fast asleep")
+                messageEmbedList.append(discord.Embed(title="SLP", description=f"{target.getName()} is fast asleep", color=0x45ba36))
         elif ailment["name"] == "confusion" and targetVolatileStatus["confusion"] == -1:
             if ailment["chance"] == 0 or random.randint(1, 100) <= ailment["chance"]:
                 targetVolatileStatus[ailment["name"]] = random.randint(2, 5)
-                print(target.getName(), "is confused")
+                messageEmbedList.append(discord.Embed(title="Confusion", description=f"{target.getName()} is confused", color=0x45ba36))
         target.setVolatileStatus(targetVolatileStatus)
         target.setNonVolatileStatus(targetNonVolatileStatus)
     if move.getCriticalRate() > 0:
         pokemonInBattleStats["criticalHitRate"] += 1
-        print(f"{pokemon.getName()} critical hit ratio rose!")
+        messageEmbedList.append(discord.Embed(title="Crit", description=f"{pokemon.getName()} critical hit ratio rose!", color=0x45ba36))
     if move.getHealing() != 0:
         pokemon.addHp(move.getHealing())
     if move.getDrain() != 0:
@@ -338,26 +359,44 @@ async def statChanges(move, pokemon, target, damage):
         if statChange["name"] != "hp" and -6 < pokemonInBattleStats[statChange["name"]] < 6 and -6 < targetBattleStats[statChange["name"]] < 6:
             if statChange["change"] == 1:
                 pokemonInBattleStats[statChange["name"]] += statChange["change"]
-                print(f"{pokemon.getName()}'s {statChange['name']} rose!")
+                messageEmbedList.append(discord.Embed(title="Stat change",
+                                                      description=f"{pokemon.getName()}'s {statChange['name']} rose!",
+                                                      color=0x45ba36))
             elif statChange["change"] == 2:
                 pokemonInBattleStats[statChange["name"]] += statChange["change"]
-                print(f"{pokemon.getName()}'s {statChange['name']} sharply rose!")
+                messageEmbedList.append(discord.Embed(title="Stat change",
+                                                      description=f"{pokemon.getName()}'s {statChange['name']} sharply rose!",
+                                                      color=0x45ba36))
             elif statChange["change"] == 3:
                 pokemonInBattleStats[statChange["name"]] += statChange["change"]
-                print(f"{pokemon.getName()}'s {statChange['name']} rose drastically!")
+                messageEmbedList.append(discord.Embed(title="Stat change",
+                                                      description=f"{pokemon.getName()}'s {statChange['name']} rose drastically!",
+                                                      color=0x45ba36))
             elif statChange["change"] == -1:
                 targetBattleStats[statChange["name"]] += statChange["change"]
-                print(f"{target.getName()}'s {statChange['name']} fell!")
+                messageEmbedList.append(discord.Embed(title="Stat change",
+                                                      description=f"{target.getName()}'s {statChange['name']} fell!",
+                                                      color=0x45ba36))
             elif statChange["change"] == -2:
                 targetBattleStats[statChange["name"]] += statChange["change"]
-                print(f"{target.getName()}'s {statChange['name']} harshly fell!")
+                messageEmbedList.append(discord.Embed(title="Stat change",
+                                                      description=f"{target.getName()}'s {statChange['name']} harshly fell!",
+                                                      color=0x45ba36))
             elif statChange["change"] == -3:
                 targetBattleStats[statChange["name"]] += statChange["change"]
-                print(f"{target.getName()}'s {statChange['name']} severely fell!")
-        else:
-            print("nothing happened!")
+                messageEmbedList.append(discord.Embed(title="Stat change",
+                                                      description=f"{target.getName()}'s {statChange['name']} severely fell!",
+                                                      color=0x45ba36))
+        elif damage > 0:
+            messageEmbedList.append(discord.Embed(title="Stat change",
+                                                  description="Nothing happened",
+                                                  color=0x45ba36))
         pokemon.setBattleStats(pokemonInBattleStats)
         target.setBattleStats(targetBattleStats)
+    for embed in messageEmbedList:
+        await ctx.send(embed=embed)
+        global messages
+        messages += 1
 
 
 async def calculateBrnPsnDamage(pokemon, previousValue=0):
@@ -398,8 +437,9 @@ async def moveHitLoop(pokemon, target, move, ctx):
                 await sendMessageEmbed(moveHits["message"], ctx)
             damageDict = calculateDamage(pokemon, target, move, False)
             target.lowerHp(damageDict["damage"])
-            await getDamageEmbed(damageDict["damage"], target, ctx)
-            await statChanges(move, pokemon, target, damageDict["damage"])
+            if damageDict["damage"] > 0:
+                await getDamageEmbed(damageDict["damage"], target, ctx)
+            await statChanges(move, pokemon, target, damageDict["damage"], ctx)
             effectiveHits += 1
             moveHits = attackHit(pokemon, target, move)
         else:
@@ -429,7 +469,8 @@ async def moveHit(pokemon, target, move, ctx):
                 await sendMessageEmbed(f"{pokemon.getName()} hurt itself in its confusion", ctx)
                 damage = calculateDamage(pokemon, pokemon, move, True)["damage"]
                 pokemon.lowerHp(damage)
-                await getDamageEmbed(damage, target, ctx)
+                if damage > 0:
+                    await getDamageEmbed(damage, pokemon, ctx)
         volatileStatus["confusion"] -= 1
     else:
         await moveHitLoop(pokemon, target, move, ctx)
@@ -437,61 +478,64 @@ async def moveHit(pokemon, target, move, ctx):
         await lowerAfterTurnDamage(pokemon)
 
 
-async def wildPokemonFainted(trainer, pokemon):
+async def wildPokemonFainted(trainer, pokemon, ctx, client):
     currentPokemon = trainer.getCarryPokemonList()[0]
     if currentPokemon.getHp() == 0:
         print(f"{currentPokemon.getName()} fainted")
         if 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()):
-            await switchPokemon(trainer)
+            await switchPokemon(trainer, ctx, client)
     if pokemon.getHp() == 0:
         print(f"{pokemon.getName()} fainted")
 
 
-async def playerPokemonFainted(trainers):
+async def playerPokemonFainted(trainers, ctx, client):
     for trainer in trainers:
         currentPokemon = trainer.getCarryPokemonList()[0]
         if currentPokemon.getHp() == 0:
             print(f"{currentPokemon.getName()} fainted")
             if 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()):
-                await switchPokemon(trainer)
+                await switchPokemon(trainer, ctx, client)
 
 
 async def wildAttackTurn(trainer, wildPokemon, ctx, client):
-    # trainerAction = await battleMenu(trainer, wildPokemon, False, ctx, client)
-    # while trainerAction["displayMenu"]:
-    #     trainerAction = await battleMenu(trainer, wildPokemon, False, ctx, client)
-    # print(trainerAction)
-    trainerAction = {"run": False, "useItem": True}
+    trainerAction = await battleMenu(trainer, wildPokemon, False, ctx, client)
+    while trainerAction["displayMenu"]:
+        trainerAction = await battleMenu(trainer, wildPokemon, False, ctx, client)
+    print(trainerAction)
+    global messages
+    # trainerAction = {"run": False, "useItem": True}
     if trainerAction["run"]:
         runEmbed = discord.Embed(title="Run", description="Got away safely", color=0x45ba36)
         runEmbed.set_footer(text="_" * 90)
         await ctx.send(embed=runEmbed)
+        messages += 1
         return False
     elif trainerAction["useItem"]:
         useItemEmbed = discord.Embed(title="Use Item", description=f"{trainer.getName()} used <item-name>", color=0x45ba36)
         useItemEmbed.set_footer(text="_" * 90)
         await ctx.send(embed=useItemEmbed)
+        messages += 1
         await moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))], ctx)
-        await wildPokemonFainted(trainer, wildPokemon)
+        await wildPokemonFainted(trainer, wildPokemon, ctx, client)
         return True
     elif trainerAction["switch"]:
         await moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))], ctx)
-        await wildPokemonFainted(trainer, wildPokemon)
+        await wildPokemonFainted(trainer, wildPokemon, ctx, client)
         return True
     elif trainerAction["move"]:
         trainerPokemon = trainer.getCarryPokemonList()[0]
         if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
-            await moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
-            await wildPokemonFainted(trainer, wildPokemon)
+            await moveHit(trainerPokemon, wildPokemon, trainerAction["move"], ctx)
+            await wildPokemonFainted(trainer, wildPokemon, ctx, client)
             if all(pkm.getHp() for pkm in [trainerPokemon, wildPokemon]) > 0:
                 await moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))], ctx)
-                await wildPokemonFainted(trainer, wildPokemon)
+                await wildPokemonFainted(trainer, wildPokemon, ctx, client)
         else:
             await moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))], ctx)
-            await wildPokemonFainted(trainer, wildPokemon)
+            await wildPokemonFainted(trainer, wildPokemon, ctx, client)
             if all(pkm.getHp() for pkm in [trainerPokemon, wildPokemon]) > 0:
                 await moveHit(trainerPokemon, wildPokemon, trainerAction["move"], ctx)
-                await wildPokemonFainted(trainer, wildPokemon)
+                await wildPokemonFainted(trainer, wildPokemon, ctx, client)
         return True
 
 
@@ -541,11 +585,17 @@ async def playerAttackTurn(trainer1, trainer2):
 
 async def wildBattle(trainer, ctx, client):
     wildPokemon = Pokemon(random.randint(1, 500), 30)
-    print(f"WildPokemon: {wildPokemon.getName()}")
-    print(trainer.getName(), "uses", trainer.getCarryPokemonList()[0].getName())
+    await getPokemonEmbed(ctx, f"{trainer.getName()} uses ", trainer.getCarryPokemonList()[0])
+    await getPokemonEmbed(ctx, "Wild pokemon: ", wildPokemon)
     continueTurns = True
+    await asyncio.sleep(5)
     while wildPokemon.getHp() > 0 and 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()) and continueTurns:
+        global messages
+        await ctx.channel.purge(limit=int(messages))
+        messages = 0
+        await getPokemonEmbed(ctx, "", trainer.getCarryPokemonList()[0], wildPokemon)
         continueTurns = await wildAttackTurn(trainer, wildPokemon, ctx, client)
+        await asyncio.sleep(3)
 
 
 async def playerBattle(players):
@@ -556,3 +606,4 @@ async def playerBattle(players):
 
 
 # fainted in multi hit loops doesn't end loop
+# pokemon embed with status effect
