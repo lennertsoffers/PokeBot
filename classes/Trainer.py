@@ -19,9 +19,11 @@ class Trainer:
     def getCarryPokemonList(self):
         return self.carryPokemonList
 
-    def switchCarryPokemon(self, pokemon1, pokemon2):
+    def switchCarryPokemon(self, pokemon2, pokemon1=0):
         if self.carryPokemonList[pokemon2].getHp() > 0:
             self.carryPokemonList[pokemon1], self.carryPokemonList[pokemon2] = self.carryPokemonList[pokemon2], self.carryPokemonList[pokemon1]
+            for pokemon in self.carryPokemonList:
+                print(pokemon.getName())
             return True
         return False
 
