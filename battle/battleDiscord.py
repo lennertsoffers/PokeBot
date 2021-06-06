@@ -2,17 +2,50 @@ import random
 from classes.Pokemon import Pokemon
 import math
 import discord
-from discord.ext import commands
 import asyncio
 
 
 reactionList = ["\U0001F534", "\U0001F7E1", "\U0001F7E2", "\U0001F535", "\U0001F7E0", "\U0001F7E3"]
+messages = 0
 
 
 def check(*reacts):
     if reacts[0].count > 1:
         return True
     return False
+
+
+def getHpInHearts(pokemon):
+    scoreOnTwenty = math.ceil(pokemon.getHp() / pokemon.getStat('hp').getStatValue() * 20)
+    hpString = "❤" * scoreOnTwenty
+    hpString += "🖤" * (20 - scoreOnTwenty)
+    return hpString
+
+
+async def getDamageEmbed(d, p, ctx):
+    embed = discord.Embed(title=f"{p.getName()} got {d} damage", description=f"HP: {getHpInHearts(p)} {p.getHp()}", color=0x45ba36)
+    embed.set_thumbnail(url=p.getSprite())
+    await ctx.send(embed=embed)
+    await asyncio.sleep(1)
+    global messages
+    messages += 1
+
+
+async def sendMessageEmbed(message, ctx):
+    embed = discord.Embed(title=message, description="\u200b", color=0x45ba36)
+    embed.set_footer(text="_" * 90)
+    await ctx.send(embed=embed)
+    await asyncio.sleep(1)
+    global messages
+    messages += 1
+
+
+async def useMoveEmbed(m, p, ctx):
+    embed = discord.Embed(title=f"{p.getName()} uses {m.getName()}", description="\u200b", color=0x45ba36)
+    await ctx.send(embed=embed)
+    await asyncio.sleep(1)
+    global messages
+    messages += 1
 
 
 async def switchPokemon(trainer, ctx, client):
@@ -22,9 +55,7 @@ async def switchPokemon(trainer, ctx, client):
     carryPokemonList = trainer.getCarryPokemonList()
 
     async def createPartyPokemonEmbeds(pokemon, reaction, infoAfterName=""):
-        scoreOnTwenty = math.ceil(pokemon.getHp() / pokemon.getStat('hp').getStatValue() * 20)
-        hpString = "❤" * scoreOnTwenty
-        hpString += "🖤" * (20 - scoreOnTwenty)
+        hpString = getHpInHearts(pokemon)
         partyPokemonEmbed = discord.Embed(title=pokemon.getName() + infoAfterName, description=f"HP: {hpString} {pokemon.getHp()}", color=0x45ba36)
         partyPokemonEmbed.set_thumbnail(url=pokemon.getSprite())
         await ctx.send(embed=partyPokemonEmbed)
@@ -129,7 +160,7 @@ async def battleMenu(trainer, target, trainerBattle, ctx, client):
     return menuOutput
 
 
-async def attackHit(pokemon, target, move):
+def attackHit(pokemon, target, move):
     nvStatus = pokemon.getNonVolatileStatus()
     vStatus = pokemon.getVolatileStatus()
     mAccuracy = move.getAccuracy()
@@ -175,7 +206,7 @@ async def attackHit(pokemon, target, move):
     return canAttackOutput
 
 
-async def calculateAmountOfHits(move):
+def calculateAmountOfHits(move):
     if not move.getMultiHitType() == "single":
         if move.getMultiHitType() == "double":
             return 2
@@ -192,16 +223,20 @@ async def calculateAmountOfHits(move):
     return 1
 
 
-async def calculateDamage(pokemon, target, move, basicDamageCalculation):
-    async def calculateStat(value, inBattleStat):
+def calculateDamage(pokemon, target, move, basicDamageCalculation):
+    calculateDamageOutput = {"damage": 0,
+                             "criticalHit": False,
+                             "text": ""}
+
+    def calculateStat(value, inBattleStat):
         if inBattleStat >= 0:
             value *= ((2 + inBattleStat) / 2)
         else:
             value *= (2 / (2 + abs(inBattleStat)))
         return value
 
-    async def calculateMultiplier(pkm, tar, mov):
-        async def isCriticalHit(critRate):
+    def calculateMultiplier(pkm, tar, mov):
+        def isCriticalHit(critRate):
             if critRate == 0:
                 return random.randint(0, 100) <= 6
             elif critRate == 1:
@@ -213,7 +248,7 @@ async def calculateDamage(pokemon, target, move, basicDamageCalculation):
             else:
                 return random.randint(0, 100) <= 50
 
-        async def typeMultiplier(moveType, targetTypes):
+        def typeMultiplier(moveType, targetTypes):
             multiplierOutput = {"multiplier": 1, "text": ""}
             for pkmType in targetTypes:
                 if moveType in pkmType.getHalfDamageFrom() and multiplierOutput["multiplier"] != 0.5:
@@ -240,10 +275,10 @@ async def calculateDamage(pokemon, target, move, basicDamageCalculation):
     if move.getPower():
         if move.getDamageClass() == "physical":
             a = calculateStat(pokemon.getStat("attack").getStatValue(), pokemon.getBattleStats()["attack"])
-            d = calculateStat(target.getStat("async defense").getStatValue(), target.getBattleStats()["async defense"])
+            d = calculateStat(target.getStat("defense").getStatValue(), target.getBattleStats()["defense"])
         else:
             a = calculateStat(pokemon.getStat("special-attack").getStatValue(), pokemon.getBattleStats()["special-attack"])
-            d = calculateStat(target.getStat("special-async defense").getStatValue(), target.getBattleStats()["special-async defense"])
+            d = calculateStat(target.getStat("special-defense").getStatValue(), target.getBattleStats()["special-defense"])
         if basicDamageCalculation:
             damage = round(((((2 * pokemon.getLevel()) / 5) + 2) * 40 * (a / d)) / 50)
         else:
@@ -251,12 +286,12 @@ async def calculateDamage(pokemon, target, move, basicDamageCalculation):
     else:
         damage = 0
     if multiplierDict["crit"] and not basicDamageCalculation:
-        print("a critical hit")
+        calculateDamageOutput["criticalHit"] = True
     if multiplierDict["typeMultiplier"] and not basicDamageCalculation and damage != 0:
-        print(multiplierDict["typeMultiplierText"])
+        calculateDamageOutput["text"] = multiplierDict["typeMultiplierText"]
     if damage != 0:
-        print(f"damage: {damage}")
-    return damage
+        calculateDamageOutput["damage"] = damage
+    return calculateDamageOutput
 
 
 async def statChanges(move, pokemon, target, damage):
@@ -348,53 +383,56 @@ async def lowerAfterTurnDamage(pokemon):
         await lowerNonVolatileStatus(pokemon, "BRN", "burn")
 
 
-async def moveHitLoop(pokemon, target, move):
-    hitCount = await calculateAmountOfHits(move)
+async def moveHitLoop(pokemon, target, move, ctx):
+    hitCount = calculateAmountOfHits(move)
     effectiveHits = 1
     stopHit = False
     moveHits = attackHit(pokemon, target, move)
     while effectiveHits <= hitCount and not stopHit:
         if moveHits["attack"]:
             if moveHits["before"] and moveHits["message"] != "":
-                print(moveHits["message"])
+                await sendMessageEmbed(moveHits["message"], ctx)
             if effectiveHits == 1:
-                print(f"{pokemon.getName()} uses {move.getName()}")
+                await useMoveEmbed(move, pokemon, ctx)
             if not moveHits["before"] and moveHits["message"] != "":
-                print(moveHits["message"])
-            damage = calculateDamage(pokemon, target, move, False)
-            target.lowerHp(damage)
-            await statChanges(move, pokemon, target, damage)
+                await sendMessageEmbed(moveHits["message"], ctx)
+            damageDict = calculateDamage(pokemon, target, move, False)
+            target.lowerHp(damageDict["damage"])
+            await getDamageEmbed(damageDict["damage"], target, ctx)
+            await statChanges(move, pokemon, target, damageDict["damage"])
             effectiveHits += 1
             moveHits = attackHit(pokemon, target, move)
         else:
             stopHit = True
             if moveHits["before"] and moveHits["message"] != "":
-                print(moveHits["message"])
+                await sendMessageEmbed(moveHits["message"], ctx)
             if effectiveHits == 1 and not moveHits["before"]:
-                print(f"{pokemon.getName()} uses {move.getName()}")
+                await useMoveEmbed(move, pokemon, ctx)
             if not moveHits["before"] and moveHits["message"] != "":
-                print(moveHits["message"])
+                await sendMessageEmbed(moveHits["message"], ctx)
     if hitCount > 1:
-        print(f"it hit {effectiveHits - 1} times")
+        await sendMessageEmbed(f"it hit {effectiveHits - 1} times", ctx)
 
 
-async def moveHit(pokemon, target, move):
+async def moveHit(pokemon, target, move, ctx):
     volatileStatus = pokemon.getVolatileStatus()
     if volatileStatus["confusion"] != -1:
         if volatileStatus["confusion"] == 0:
-            print(f"{pokemon.getName()} snapped out of confusion")
-            await moveHitLoop(pokemon, target, move)
+            await sendMessageEmbed(f"{pokemon.getName()} snapped out of confusion", ctx)
+            await moveHitLoop(pokemon, target, move, ctx)
         else:
             pokemon.setVolatileStatus(volatileStatus)
-            print(f"{pokemon.getName()} is confused")
+            await sendMessageEmbed(f"{pokemon.getName()} is confused", ctx)
             if random.randint(1, 100) <= 50:
-                await moveHitLoop(pokemon, target, move)
+                await moveHitLoop(pokemon, target, move, ctx)
             else:
-                print(f"{pokemon.getName()} hurt itself in its confusion")
-                pokemon.lowerHp(calculateDamage(pokemon, pokemon, move, True))
+                await sendMessageEmbed(f"{pokemon.getName()} hurt itself in its confusion", ctx)
+                damage = calculateDamage(pokemon, pokemon, move, True)["damage"]
+                pokemon.lowerHp(damage)
+                await getDamageEmbed(damage, target, ctx)
         volatileStatus["confusion"] -= 1
     else:
-        await moveHitLoop(pokemon, target, move)
+        await moveHitLoop(pokemon, target, move, ctx)
     if pokemon.getHp() > 0:
         await lowerAfterTurnDamage(pokemon)
 
@@ -419,8 +457,11 @@ async def playerPokemonFainted(trainers):
 
 
 async def wildAttackTurn(trainer, wildPokemon, ctx, client):
-    trainerAction = await battleMenu(trainer, wildPokemon, False, ctx, client)
-    print(trainerAction)
+    # trainerAction = await battleMenu(trainer, wildPokemon, False, ctx, client)
+    # while trainerAction["displayMenu"]:
+    #     trainerAction = await battleMenu(trainer, wildPokemon, False, ctx, client)
+    # print(trainerAction)
+    trainerAction = {"run": False, "useItem": True}
     if trainerAction["run"]:
         runEmbed = discord.Embed(title="Run", description="Got away safely", color=0x45ba36)
         runEmbed.set_footer(text="_" * 90)
@@ -430,25 +471,28 @@ async def wildAttackTurn(trainer, wildPokemon, ctx, client):
         useItemEmbed = discord.Embed(title="Use Item", description=f"{trainer.getName()} used <item-name>", color=0x45ba36)
         useItemEmbed.set_footer(text="_" * 90)
         await ctx.send(embed=useItemEmbed)
-        await moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+        await moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))], ctx)
         await wildPokemonFainted(trainer, wildPokemon)
+        return True
     elif trainerAction["switch"]:
-        await moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+        await moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))], ctx)
         await wildPokemonFainted(trainer, wildPokemon)
+        return True
     elif trainerAction["move"]:
         trainerPokemon = trainer.getCarryPokemonList()[0]
         if trainerPokemon.getStat("speed").getStatValue() > wildPokemon.getStat("speed").getStatValue():
             await moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
             await wildPokemonFainted(trainer, wildPokemon)
             if all(pkm.getHp() for pkm in [trainerPokemon, wildPokemon]) > 0:
-                await moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+                await moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))], ctx)
                 await wildPokemonFainted(trainer, wildPokemon)
         else:
-            await moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
+            await moveHit(wildPokemon, trainerPokemon, wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))], ctx)
             await wildPokemonFainted(trainer, wildPokemon)
             if all(pkm.getHp() for pkm in [trainerPokemon, wildPokemon]) > 0:
-                await moveHit(trainerPokemon, wildPokemon, trainerAction["move"])
+                await moveHit(trainerPokemon, wildPokemon, trainerAction["move"], ctx)
                 await wildPokemonFainted(trainer, wildPokemon)
+        return True
 
 
 async def playerAttackTurn(trainer1, trainer2):
@@ -509,3 +553,6 @@ async def playerBattle(players):
         print(player.getName(), "uses", player.getCarryPokemonList()[0].getName())
     while 0 < any(pkm.getHp() for pkm in players[0].getCarryPokemonList()) and 0 < any(pkm.getHp() for pkm in players[1].getCarryPokemonList()):
         await playerAttackTurn(players[0], players[1])
+
+
+# fainted in multi hit loops doesn't end loop
