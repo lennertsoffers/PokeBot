@@ -75,7 +75,7 @@ async def wild_battle(ctx):
     if ctx.channel.name != 'free-roam':
         return
     trainer = Trainer(ctx.message.author.id, 'test')
-    pkm = Pokemon("sandshrew", 10)
+    pkm = Pokemon("sandshrew", 30)
     # pkm1 = Pokemon(24, 100)
     # pkm2 = Pokemon(234, 100)
     # pkm3 = Pokemon(313, 100)
