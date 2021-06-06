@@ -9,16 +9,49 @@ import asyncio
 reactionList = ["\U0001F534", "\U0001F7E1", "\U0001F7E2", "\U0001F535", "\U0001F7E0", "\U0001F7E3"]
 
 
+def check(*reacts):
+    if reacts[0].count > 1:
+        return True
+    return False
+
+
 async def switchPokemon(trainer, ctx, client):
-    partyPokemonEmbed = discord.Embed(title="Your party", description="Choose a pokemon to switch your party leader with", color=0x45ba36)
-    await ctx.send(embed=partyPokemonEmbed)
-    for pokemon in trainer.getCarryPokemonList():
+    switchPokemonEmbed = discord.Embed(title="Your party", description="Choose a pokemon to switch your party leader with", color=0x45ba36)
+    choiceSwitchPokemonEmbed = discord.Embed(title="Choose a pokemon to switch", description="\u200b", color=0x45ba36)
+    await ctx.send(embed=switchPokemonEmbed)
+    carryPokemonList = trainer.getCarryPokemonList()
+
+    async def createPartyPokemonEmbeds(pokemon, reaction, infoAfterName=""):
         scoreOnTwenty = math.ceil(pokemon.getHp() / pokemon.getStat('hp').getStatValue() * 20)
-        hpString = "♥" * scoreOnTwenty
+        hpString = "❤" * scoreOnTwenty
         hpString += "🖤" * (20 - scoreOnTwenty)
-        partyPokemonEmbed = discord.Embed(title=pokemon.getName(), description=f"HP: {hpString} {pokemon.getHp()}", color=0x45ba36)
+        partyPokemonEmbed = discord.Embed(title=pokemon.getName() + infoAfterName, description=f"HP: {hpString} {pokemon.getHp()}", color=0x45ba36)
         partyPokemonEmbed.set_thumbnail(url=pokemon.getSprite())
         await ctx.send(embed=partyPokemonEmbed)
+        choiceSwitchPokemonEmbed.add_field(name=reaction + " " + pokemon.getName(), value="\u200b", inline=True)
+
+    await createPartyPokemonEmbeds(carryPokemonList[0], reactionList[0], " (party leader)")
+    for pokemonIndex in range(1, len(carryPokemonList)):
+        await createPartyPokemonEmbeds(carryPokemonList[pokemonIndex], reactionList[pokemonIndex])
+    choiceSwitchPokemonEmbed.set_footer(text="_" * 90)
+    choiceSwitchMessage = await ctx.send(embed=choiceSwitchPokemonEmbed)
+    for i in range(len(carryPokemonList)):
+        await choiceSwitchMessage.add_reaction(emoji=reactionList[i])
+    try:
+        await client.wait_for('reaction_add', check=check, timeout=120)
+        choiceSwitchMessageNew = await ctx.channel.fetch_message(choiceSwitchMessage.id)
+        switched = None
+        for i in range(len(choiceSwitchMessageNew.reactions)):
+            if choiceSwitchMessageNew.reactions[i].count > 1:
+                switched = trainer.switchCarryPokemon(i)
+                if i == 0:
+                    switched = False
+        return switched
+    except asyncio.TimeoutError:
+        trainerCreationFailEmbed = discord.Embed(title="Failed to switch pokemon!", description="You didn't choose a pokemon to switch.", color=0x45ba36)
+        trainerCreationFailEmbed.set_footer(text="_"*90)
+        await ctx.send(embed=trainerCreationFailEmbed)
+        return False
 
 
 async def battleMenu(trainer, target, trainerBattle, ctx, client):
@@ -33,16 +66,12 @@ async def battleMenu(trainer, target, trainerBattle, ctx, client):
     actionList = ["fight", "run", "pokemon", "bag"]
     actionMenuEmbed = discord.Embed(title="Choose your action", description="\u200b", color=0x45ba36)
     for i in range(len(actionList)):
-        actionMenuEmbed.add_field(name=reactionList[i] + " " + actionList[i].capitalize(), value="\u200b", inline=False)
+        actionMenuEmbed.add_field(name=reactionList[i] + " " + actionList[i].capitalize(), value="\u200b", inline=True)
     actionMenuEmbed.set_footer(text="_"*90)
     actionMenuEmbedMessage = await ctx.send(embed=actionMenuEmbed)
     for i in range(len(actionList)):
         await actionMenuEmbedMessage.add_reaction(emoji=reactionList[i])
     try:
-        def check(*reacts):
-            if reacts[0].count > 1:
-                return True
-            return False
         await client.wait_for('reaction_add', check=check, timeout=120)
         actionMenuEmbedMessageNew = await ctx.channel.fetch_message(actionMenuEmbedMessage.id)
         actionId = None
@@ -55,17 +84,12 @@ async def battleMenu(trainer, target, trainerBattle, ctx, client):
             moveMenuEmbed = discord.Embed(title="Choose a move", description="\u200b", color=0x45ba36)
             for moveIndex in range(len(moves)):
                 move = moves[f"move{moveIndex + 1}"]
-                moveMenuEmbed.add_field(name=reactionList[moveIndex] + " " + move.getName().capitalize(), value=move.getPower(), inline=True)
+                moveMenuEmbed.add_field(name=reactionList[moveIndex] + " " + move.getName().capitalize(), value=move.getPower(), inline=False)
             moveMenuEmbed.set_footer(text="_" * 90)
             moveMenuEmbedMessage = await ctx.send(embed=moveMenuEmbed)
             for i in range(len(moves)):
                 await moveMenuEmbedMessage.add_reaction(emoji=reactionList[i])
             try:
-                def check(*reacts):
-                    if reacts[0].count > 1:
-                        return True
-                    return False
-
                 await client.wait_for('reaction_add', check=check, timeout=120)
                 moveMenuEmbedMessageNew = await ctx.channel.fetch_message(moveMenuEmbedMessage.id)
                 moveId = None
@@ -90,7 +114,10 @@ async def battleMenu(trainer, target, trainerBattle, ctx, client):
                 else:
                     menuOutput["run"] = True
         elif actionList[actionId] == "pokemon":
-            menuOutput["switch"] = True
+            if await switchPokemon(trainer, ctx, client):
+                menuOutput["switch"] = True
+            else:
+                menuOutput["displayMenu"] = True
         else:
             menuOutput["useItem"] = True
 
@@ -406,7 +433,6 @@ async def wildAttackTurn(trainer, wildPokemon, ctx, client):
         await moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
         await wildPokemonFainted(trainer, wildPokemon)
     elif trainerAction["switch"]:
-        await switchPokemon(trainer, ctx, client)
         await moveHit(wildPokemon, trainer.getCarryPokemonList()[0], wildPokemon.getMoves()["move" + str(random.randint(1, len(wildPokemon.getMoves())))])
         await wildPokemonFainted(trainer, wildPokemon)
     elif trainerAction["move"]:

@@ -75,25 +75,30 @@ async def wild_battle(ctx):
     if ctx.channel.name != 'free-roam':
         return
     trainer = Trainer(ctx.message.author.id, 'test')
-    pkm = Pokemon(1, 100)
-    # pkm1 = Pokemon(24, 100)
+    pkm = Pokemon("wailord", 100)
+    pkm1 = Pokemon(24, 100)
     # pkm2 = Pokemon(234, 100)
     # pkm3 = Pokemon(313, 100)
     # pkm4 = Pokemon(241, 100)
     # pkm5 = Pokemon(196, 100)
-    pkm.lowerHp(100)
-    # pkm1.lowerHp(20)
+    pkm.lowerHp(0)
+    pkm1.lowerHp(20)
     # pkm2.lowerHp(50)
     # pkm3.lowerHp(120)
     # pkm4.lowerHp(0)
     # pkm5.lowerHp(40)
     trainer.addPokemon(pkm)
-    # trainer.addPokemon(pkm1)
+    trainer.addPokemon(pkm1)
     # trainer.addPokemon(pkm2)
     # trainer.addPokemon(pkm3)
     # trainer.addPokemon(pkm4)
     # trainer.addPokemon(pkm5)
     await wildBattle(trainer, ctx, client)
+
+
+@client.command()
+async def clear(ctx, number):
+    await ctx.channel.purge(limit=int(number))
 
 
 client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.-3J4fgmva3h_4k1h7fOxGtsxskg")
