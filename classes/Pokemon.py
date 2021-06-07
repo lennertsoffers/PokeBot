@@ -184,17 +184,7 @@ class Pokemon:
         return self.hp
 
     def addHp(self, amount):
-        if amount < 0:
-            self.lowerHp(abs(amount))
-            print(self.name, "got", abs(amount), "recoil")
-        else:
-            hpDifference = self.stats["hp"].getStatValue() - self.hp
-            if hpDifference > amount:
-                self.hp += amount
-                print(self.name, "healed", amount, "hp")
-            else:
-                self.hp = self.stats["hp"].getStatValue()
-                print(self.name, "healed", hpDifference, "hp")
+        self.hp += amount
 
     def lowerHp(self, amount):
         self.hp -= amount
