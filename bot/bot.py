@@ -54,13 +54,14 @@ async def new_player(ctx, name=None):
         trainerName = name
         if trainerName is None:
             trainerName = ctx.message.author.name
-        trainer = Trainer(ctx.message.author.id, trainerName)
+        trainer = Trainer(ctx.message.author.id, trainerName, ctx.message.author.avatar_url)
         starter = Pokemon(starterPokemonNameList[starterId], level=5)
         trainer.addPokemon(starter)
         trainerDict.update({ctx.message.author.id: trainer})
         trainerCreationSuccessEmbed = discord.Embed(title=f"Welcome to the world of pokemon {trainer.getName()}",
                                                     description="Congratulations with your first Pokemon. We wish you success on your journey to become a pokemon master",
                                                     color=0x45ba36)
+        trainerCreationSuccessEmbed.set_author(name=trainer.getName(), icon_url=trainer.getProfilePicture())
         trainerCreationSuccessEmbed.set_image(url=f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{starter.getId()}.png")
         await ctx.send(embed=trainerCreationSuccessEmbed)
     except asyncio.TimeoutError:
@@ -70,33 +71,33 @@ async def new_player(ctx, name=None):
     return
 
 
-@client.command(aliases=["wb", "wildBattle", "wildbattle", "w", "Wildbattle", "WildBattle"])
+@client.command(aliases=["wb", "wildBattle", "wildbattle", "w", "Wildbattle", "WildBattle", ""])
 async def wild_battle(ctx):
     if ctx.channel.name != 'free-roam':
         return
     trainer = Trainer(ctx.message.author.id, 'test')
-    pkm = Pokemon("sandshrew", 30)
-    # pkm1 = Pokemon(24, 100)
-    # pkm2 = Pokemon(234, 100)
-    # pkm3 = Pokemon(313, 100)
-    # pkm4 = Pokemon(241, 100)
-    # pkm5 = Pokemon(196, 100)
-    pkm.lowerHp(0)
-    # pkm1.lowerHp(20)
-    # pkm2.lowerHp(50)
-    # pkm3.lowerHp(120)
-    # pkm4.lowerHp(0)
-    # pkm5.lowerHp(40)
+    pkm = Pokemon("wailord", 100)
+    pkm1 = Pokemon("turtwig", 100)
+    pkm2 = Pokemon(random.randint(1, 600), 100)
+    pkm3 = Pokemon(random.randint(1, 600), 100)
+    pkm4 = Pokemon(random.randint(1, 600), 100)
+    pkm5 = Pokemon(random.randint(1, 600), 100)
+    # pkm.lowerHp(450)
+    # # pkm1.lowerHp(20)
+    # # pkm2.lowerHp(50)
+    # # pkm3.lowerHp(120)
+    # # pkm4.lowerHp(0)
+    # # pkm5.lowerHp(40)
     trainer.addPokemon(pkm)
-    # trainer.addPokemon(pkm1)
-    # trainer.addPokemon(pkm2)
-    # trainer.addPokemon(pkm3)
-    # trainer.addPokemon(pkm4)
-    # trainer.addPokemon(pkm5)
+    trainer.addPokemon(pkm1)
+    trainer.addPokemon(pkm2)
+    trainer.addPokemon(pkm3)
+    trainer.addPokemon(pkm4)
+    trainer.addPokemon(pkm5)
     await wildBattle(trainer, ctx, client)
 
 
-@client.command()
+@client.command(aliases=["c", "C", "Clear", "CLEAR"])
 async def clear(ctx, number):
     await ctx.channel.purge(limit=int(number))
 

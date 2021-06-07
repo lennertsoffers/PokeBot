@@ -33,7 +33,6 @@ async def getDamageEmbed(d, p, ctx):
 
 async def sendMessageEmbed(message, ctx):
     embed = discord.Embed(title=message, description="\u200b", color=0x45ba36)
-    embed.set_footer(text="_" * 90)
     await ctx.send(embed=embed)
     await asyncio.sleep(2)
     global messages
@@ -46,6 +45,12 @@ async def useMoveEmbed(m, p, ctx):
     await asyncio.sleep(2)
     global messages
     messages += 1
+
+
+async def sendFaintedEmbed(ctx, pokemon):
+    embed = discord.Embed(title=f"{pokemon.getName()} fainted")
+    embed.set_thumbnail(url=pokemon.getSprite())
+    await ctx.send(embed=embed)
 
 
 async def getPokemonEmbed(ctx, textBefore="", *args):
@@ -351,10 +356,29 @@ async def statChanges(move, pokemon, target, damage, ctx):
     if move.getCriticalRate() > 0:
         pokemonInBattleStats["criticalHitRate"] += 1
         messageEmbedList.append(discord.Embed(title="Crit", description=f"{pokemon.getName()} critical hit ratio rose!", color=0x45ba36))
-    if move.getHealing() != 0:
-        pokemon.addHp(move.getHealing())
+    healing = move.getHealing()
+
+    def healPokemonHp(pkm, amount):
+        maxHeal = pokemon.getStat("hp").getStatValue() - pokemon.getHp()
+        if amount > maxHeal:
+            pkm.addHp(maxHeal)
+            messageEmbedList.append(
+                discord.Embed(title="Heal", description=f"{pkm.getName()} healed {maxHeal}hp", color=0x45ba36))
+        else:
+            pkm.addHp(amount)
+            messageEmbedList.append(
+                discord.Embed(title="Heal", description=f"{pkm.getName()} healed {amount}hp", color=0x45ba36))
+
+    if healing != 0:
+        if healing < 0:
+            pokemon.lowerHp(healing)
+            messageEmbedList.append(
+                discord.Embed(title="Recoil", description=f"{pokemon.getName()} got {healing} recoil", color=0x45ba36))
+        else:
+            healPokemonHp(pokemon, healing)
+
     if move.getDrain() != 0:
-        pokemon.addHp(round(damage * (move.getDrain() / 100)))
+        healPokemonHp(pokemon, (round(damage * (move.getDrain() / 100))))
     for statChange in move.getStatChanges():
         if statChange["name"] != "hp" and -6 < pokemonInBattleStats[statChange["name"]] < 6 and -6 < targetBattleStats[statChange["name"]] < 6:
             if statChange["change"] == 1:
@@ -481,11 +505,11 @@ async def moveHit(pokemon, target, move, ctx):
 async def wildPokemonFainted(trainer, pokemon, ctx, client):
     currentPokemon = trainer.getCarryPokemonList()[0]
     if currentPokemon.getHp() == 0:
-        print(f"{currentPokemon.getName()} fainted")
+        await sendFaintedEmbed(ctx, currentPokemon)
         if 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()):
             await switchPokemon(trainer, ctx, client)
     if pokemon.getHp() == 0:
-        print(f"{pokemon.getName()} fainted")
+        await sendFaintedEmbed(ctx, pokemon)
 
 
 async def playerPokemonFainted(trainers, ctx, client):
@@ -584,7 +608,7 @@ async def playerAttackTurn(trainer1, trainer2):
 
 
 async def wildBattle(trainer, ctx, client):
-    wildPokemon = Pokemon(random.randint(1, 500), 30)
+    wildPokemon = Pokemon(random.randint(1, 500), 100)
     await getPokemonEmbed(ctx, f"{trainer.getName()} uses ", trainer.getCarryPokemonList()[0])
     await getPokemonEmbed(ctx, "Wild pokemon: ", wildPokemon)
     continueTurns = True
@@ -607,3 +631,4 @@ async def playerBattle(players):
 
 # fainted in multi hit loops doesn't end loop
 # pokemon embed with status effect
+# recoil healed -... damage

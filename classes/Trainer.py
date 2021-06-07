@@ -1,11 +1,12 @@
 
 class Trainer:
-    def __init__(self, discordId, name=None):
+    def __init__(self, discordId, name=None, profilePicture=None):
         self.name = name
         self.pokemonList = []
         self.carryPokemonList = []
         self.inventoryList = []
         self.discordId = discordId
+        self.profilePicture = profilePicture
 
     def getName(self):
         return self.name
@@ -52,3 +53,9 @@ class Trainer:
 
     def setDiscordId(self, identifier):
         self.discordId = identifier
+
+    def getProfilePicture(self):
+        return self.profilePicture
+
+    def setProfilePicture(self, url):
+        self.profilePicture = url
