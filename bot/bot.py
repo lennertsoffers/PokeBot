@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.utils import get
 from classes.Pokemon import Pokemon
 from classes.Trainer import Trainer
-from battle.battleDiscord import wildBattle
+from battle.battleDiscord import wildBattle, playerBattle
 import asyncio
 import random
 
@@ -11,6 +11,7 @@ client = commands.Bot(command_prefix="_")
 
 # Global variables
 trainerDict = {}
+battleRooms = {"room1": False, "room2": False}
 
 
 @client.event
@@ -75,31 +76,49 @@ async def new_player(ctx, name=None):
 async def wild_battle(ctx):
     if ctx.channel.name != 'free-roam':
         return
-    trainer = Trainer(ctx.message.author.id, 'test')
-    pkm = Pokemon("wailord", 100)
-    pkm1 = Pokemon("turtwig", 100)
-    pkm2 = Pokemon(random.randint(1, 600), 100)
-    pkm3 = Pokemon(random.randint(1, 600), 100)
-    pkm4 = Pokemon(random.randint(1, 600), 100)
-    pkm5 = Pokemon(random.randint(1, 600), 100)
+    trainer = trainerDict[ctx.message.author.id]
+    # trainer = Trainer(ctx.message.author.id, 'test')
+    # pkm = Pokemon("sandshrew", 40)
+    # pkm1 = Pokemon("turtwig", 100)
+    # pkm2 = Pokemon(random.randint(1, 600), 100)
+    # pkm3 = Pokemon(random.randint(1, 600), 100)
+    # pkm4 = Pokemon(random.randint(1, 600), 100)
+    # pkm5 = Pokemon(random.randint(1, 600), 100)
     # pkm.lowerHp(450)
     # # pkm1.lowerHp(20)
     # # pkm2.lowerHp(50)
     # # pkm3.lowerHp(120)
     # # pkm4.lowerHp(0)
     # # pkm5.lowerHp(40)
-    trainer.addPokemon(pkm)
-    trainer.addPokemon(pkm1)
-    trainer.addPokemon(pkm2)
-    trainer.addPokemon(pkm3)
-    trainer.addPokemon(pkm4)
-    trainer.addPokemon(pkm5)
+    # trainer.addPokemon(pkm)
+    # trainer.addPokemon(pkm1)
+    # trainer.addPokemon(pkm2)
+    # trainer.addPokemon(pkm3)
+    # trainer.addPokemon(pkm4)
+    # trainer.addPokemon(pkm5)
     await wildBattle(trainer, ctx, client)
+
+
+@client.command(aliases=["tb"])
+async def trainer_battle(ctx):
+    trainer = Trainer(ctx.message.author.id, 'test')
+    pkm = Pokemon(random.randint(1, 500), 40)
+    trainer.addPokemon(pkm)
+    trainer2 = Trainer(ctx.message.author.id + 1, 'test2')
+    pkm2 = Pokemon(random.randint(1, 500), 40)
+    trainer2.addPokemon(pkm2)
+    # trainer2 = trainerDict[ctx.message.author.id]
+    await playerBattle([trainer, trainer2], ctx, client)
 
 
 @client.command(aliases=["c", "C", "Clear", "CLEAR"])
 async def clear(ctx, number):
     await ctx.channel.purge(limit=int(number))
+
+
+@client.command(aliases=["Test", "t"])
+async def test(ctx):
+    print(get(ctx.guild.channels, name="room1"))
 
 
 client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.-3J4fgmva3h_4k1h7fOxGtsxskg")

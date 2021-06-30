@@ -452,7 +452,7 @@ async def moveHitLoop(pokemon, target, move, ctx):
     stopHit = False
     moveHits = attackHit(pokemon, target, move)
     while effectiveHits <= hitCount and not stopHit:
-        if moveHits["attack"]:
+        if moveHits["attack"] and target.getHp() > 0:
             if moveHits["before"] and moveHits["message"] != "":
                 await sendMessageEmbed(moveHits["message"], ctx)
             if effectiveHits == 1:
@@ -516,7 +516,7 @@ async def playerPokemonFainted(trainers, ctx, client):
     for trainer in trainers:
         currentPokemon = trainer.getCarryPokemonList()[0]
         if currentPokemon.getHp() == 0:
-            print(f"{currentPokemon.getName()} fainted")
+            await sendFaintedEmbed(ctx, currentPokemon)
             if 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()):
                 await switchPokemon(trainer, ctx, client)
 
@@ -527,7 +527,6 @@ async def wildAttackTurn(trainer, wildPokemon, ctx, client):
         trainerAction = await battleMenu(trainer, wildPokemon, False, ctx, client)
     print(trainerAction)
     global messages
-    # trainerAction = {"run": False, "useItem": True}
     if trainerAction["run"]:
         runEmbed = discord.Embed(title="Run", description="Got away safely", color=0x45ba36)
         runEmbed.set_footer(text="_" * 90)
@@ -563,34 +562,41 @@ async def wildAttackTurn(trainer, wildPokemon, ctx, client):
         return True
 
 
-async def playerAttackTurn(trainer1, trainer2):
+async def playerAttackTurn(trainer1, trainer2, ctx, client):
     async def activeTrainerAction(activeTrainer, inactiveTrainer):
-        action = battleMenu(activeTrainer, inactiveTrainer.getCarryPokemonList()[0], True)
+        action = await battleMenu(activeTrainer, inactiveTrainer.getCarryPokemonList()[0], True, ctx, client)
         while action["displayMenu"]:
-            action = battleMenu(activeTrainer, inactiveTrainer.getCarryPokemonList()[0], True)
+            action = await battleMenu(activeTrainer, inactiveTrainer.getCarryPokemonList()[0], True, ctx, client)
+        print(action)
+        global messages
         if action["useItem"]:
-            print("Use item")
+            useItemEmbed = discord.Embed(title="Use Item", description=f"{activeTrainer.getName()} used <item-name>",
+                                         color=0x45ba36)
+            useItemEmbed.set_footer(text="_" * 90)
+            await ctx.send(embed=useItemEmbed)
+            messages += 1
             return False
         elif action["move"]:
             return action["move"]
 
-    trainerTurns = {"trainer1": activeTrainerAction(trainer1, trainer2),
-                    "trainer2": activeTrainerAction(trainer2, trainer1)}
+    trainerTurns = {"trainer1": await activeTrainerAction(trainer1, trainer2),
+                    "trainer2": await activeTrainerAction(trainer2, trainer1)}
     trainerPokemons = {"trainer1": trainer1.getCarryPokemonList()[0],
                        "trainer2": trainer2.getCarryPokemonList()[0]}
+
     if trainerTurns["trainer1"] and trainerTurns["trainer2"]:
         if trainerPokemons["trainer1"].getStat("speed").getStatValue() > trainerPokemons["trainer2"].getStat("speed").getStatValue():
-            await moveHit(trainerPokemons["trainer1"], trainerPokemons["trainer2"], trainerTurns["trainer1"])
-            await playerPokemonFainted([trainer1, trainer2])
+            await moveHit(trainerPokemons["trainer1"], trainerPokemons["trainer2"], trainerTurns["trainer1"], ctx)
+            await playerPokemonFainted([trainer1, trainer2], ctx, client)
             if all(trainerPokemons[trainerPokemon].getHp() for trainerPokemon in trainerPokemons) > 0:
-                await moveHit(trainerPokemons["trainer2"], trainerPokemons["trainer1"], trainerTurns["trainer2"])
-                await playerPokemonFainted([trainer1, trainer2])
+                await moveHit(trainerPokemons["trainer2"], trainerPokemons["trainer1"], trainerTurns["trainer2"], ctx)
+                await playerPokemonFainted([trainer1, trainer2], ctx, client)
         else:
-            await moveHit(trainerPokemons["trainer2"], trainerPokemons["trainer1"], trainerTurns["trainer2"])
-            await playerPokemonFainted([trainer1, trainer2])
+            await moveHit(trainerPokemons["trainer2"], trainerPokemons["trainer1"], trainerTurns["trainer2"], ctx)
+            await playerPokemonFainted([trainer1, trainer2], ctx, client)
             if all(trainerPokemons[trainerPokemon].getHp() for trainerPokemon in trainerPokemons) > 0:
-                await moveHit(trainerPokemons["trainer1"], trainerPokemons["trainer2"], trainerTurns["trainer1"])
-                await playerPokemonFainted([trainer1, trainer2])
+                await moveHit(trainerPokemons["trainer1"], trainerPokemons["trainer2"], trainerTurns["trainer1"], ctx)
+                await playerPokemonFainted([trainer1, trainer2], ctx, client)
     else:
         for trainerTurn in trainerTurns:
             if trainerTurn == "trainer1":
@@ -600,15 +606,15 @@ async def playerAttackTurn(trainer1, trainer2):
                 active = "trainer2"
                 inactive = "trainer1"
             if trainerTurns[active]:
-                await moveHit(trainerPokemons[active], trainerPokemons[inactive], trainerTurns[active])
+                await moveHit(trainerPokemons[active], trainerPokemons[inactive], trainerTurns[active], ctx)
                 if active == "trainer1":
-                    await playerPokemonFainted([trainer1, trainer2])
+                    await playerPokemonFainted([trainer1, trainer2], ctx, client)
                 else:
-                    await playerPokemonFainted([trainer1, trainer2])
+                    await playerPokemonFainted([trainer1, trainer2], ctx, client)
 
 
 async def wildBattle(trainer, ctx, client):
-    wildPokemon = Pokemon(random.randint(1, 500), 100)
+    wildPokemon = Pokemon(random.randint(1, 500), 1)
     await getPokemonEmbed(ctx, f"{trainer.getName()} uses ", trainer.getCarryPokemonList()[0])
     await getPokemonEmbed(ctx, "Wild pokemon: ", wildPokemon)
     continueTurns = True
@@ -622,11 +628,11 @@ async def wildBattle(trainer, ctx, client):
         await asyncio.sleep(3)
 
 
-async def playerBattle(players):
+async def playerBattle(players, ctx, client):
     for player in players:
         print(player.getName(), "uses", player.getCarryPokemonList()[0].getName())
     while 0 < any(pkm.getHp() for pkm in players[0].getCarryPokemonList()) and 0 < any(pkm.getHp() for pkm in players[1].getCarryPokemonList()):
-        await playerAttackTurn(players[0], players[1])
+        await playerAttackTurn(players[0], players[1], ctx, client)
 
 
 # fainted in multi hit loops doesn't end loop
