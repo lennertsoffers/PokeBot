@@ -11,12 +11,23 @@ client = commands.Bot(command_prefix="_")
 
 # Global variables
 trainerDict = {}
-battleRooms = {"room1": False, "room2": False}
+battleRooms = []
 
 
 @client.event
 async def on_ready():
     print("Ready to go")
+
+
+@client.command(aliases=["init", "Initialize", "Init", "I", "i"])
+async def initialize(ctx):
+    roomIndex = 1
+    room = get(ctx.guild.channels, name=("room" + str(roomIndex)))
+    while room:
+        battleRooms.append({"roomName": "room" + str(roomIndex), "available": True, "roomId": room.id})
+        roomIndex += 1
+        room = get(ctx.guild.channels, name=("room" + str(roomIndex)))
+    await ctx.send("done")
 
 
 @client.command(aliases=["np", "newPlayer", "newplayer", "n", "NewPlayer", "Newplayer"])
@@ -101,14 +112,30 @@ async def wild_battle(ctx):
 
 @client.command(aliases=["tb"])
 async def trainer_battle(ctx):
-    trainer = Trainer(ctx.message.author.id, 'test')
-    pkm = Pokemon(random.randint(1, 500), 40)
-    trainer.addPokemon(pkm)
-    trainer2 = Trainer(ctx.message.author.id + 1, 'test2')
-    pkm2 = Pokemon(random.randint(1, 500), 40)
-    trainer2.addPokemon(pkm2)
+    if ctx.channel.name != "battle-requests":
+        return
+    # trainer = Trainer(ctx.message.author.id, 'test')
+    # pkm = Pokemon(random.randint(1, 500), 40)
+    # trainer.addPokemon(pkm)
+    #
+    # trainer2 = Trainer(ctx.message.author.id + 1, 'test2')
+    # pkm2 = Pokemon(random.randint(1, 500), 40)
+    # trainer2.addPokemon(pkm2)
     # trainer2 = trainerDict[ctx.message.author.id]
-    await playerBattle([trainer, trainer2], ctx, client)
+
+    battleRooms[1]["available"] = False
+    roomsFound = 0
+    selectedRooms = []
+    roomIndex = 0
+    while roomIndex < len(battleRooms) and roomsFound < 2:
+        room = battleRooms[roomIndex]
+        if room["available"]:
+            selectedRooms.append(room)
+            roomsFound += 1
+        roomIndex += 1
+    print(selectedRooms)
+
+    # await playerBattle([trainer, trainer2], ctx, client, [selectedRooms[0], selectedRooms[1]])
 
 
 @client.command(aliases=["c", "C", "Clear", "CLEAR"])
@@ -118,7 +145,7 @@ async def clear(ctx, number):
 
 @client.command(aliases=["Test", "t"])
 async def test(ctx):
-    print(get(ctx.guild.channels, name="room1"))
+    print(get(ctx.guild.channels, name="room1").id)
 
 
 client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.-3J4fgmva3h_4k1h7fOxGtsxskg")

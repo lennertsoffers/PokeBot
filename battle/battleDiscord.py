@@ -628,7 +628,7 @@ async def wildBattle(trainer, ctx, client):
         await asyncio.sleep(3)
 
 
-async def playerBattle(players, ctx, client):
+async def playerBattle(players, ctx, client, rooms):
     for player in players:
         print(player.getName(), "uses", player.getCarryPokemonList()[0].getName())
     while 0 < any(pkm.getHp() for pkm in players[0].getCarryPokemonList()) and 0 < any(pkm.getHp() for pkm in players[1].getCarryPokemonList()):
