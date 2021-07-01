@@ -14,29 +14,36 @@ trainerDict = {}
 battleRooms = []
 
 
+def check(*reacts):
+    if reacts[0].count > 1:
+        return True
+    return False
+
+
+async def createRooms(ctx, challenger, challenged):
+    category = discord.utils.get(ctx.guild.categories, name="Battle Rooms")
+    roomChallenger = await ctx.guild.create_text_channel(name="room" + str(len(battleRooms) + 1), category=category)
+    battleRooms.append({"roomName": "room" + str(len(battleRooms) + 1), "roomId": roomChallenger.id, "playerId": challenger.id})
+    roomChallenged = await ctx.guild.create_text_channel(name="room" + str(len(battleRooms) + 1), category=category)
+    battleRooms.append({"roomName": "room" + str(len(battleRooms) + 1), "roomId": roomChallenged.id, "playerId": challenged.id})
+
+    roomAssignmentEmbed = discord.Embed(title="Room assignment:",
+                                        description="Send 'ready' in your assigned room to start the battle",
+                                        color=0x45ba36)
+    roomAssignmentEmbed.add_field(name=f"{challenger.name}:",
+                                  value=await roomChallenger.create_invite(max_uses=1, unique=True))
+    roomAssignmentEmbed.add_field(name=f"{challenged.name}:",
+                                  value=await roomChallenged.create_invite(max_uses=1, unique=True))
+    return roomAssignmentEmbed
+
+
 @client.event
 async def on_ready():
     print("Ready to go")
 
 
-@client.command(aliases=["init", "Initialize", "Init", "I", "i"])
-async def initialize(ctx):
-    roomIndex = 1
-    room = get(ctx.guild.channels, name=("room" + str(roomIndex)))
-    while room:
-        battleRooms.append({"roomName": "room" + str(roomIndex), "available": True, "roomId": room.id})
-        roomIndex += 1
-        room = get(ctx.guild.channels, name=("room" + str(roomIndex)))
-    await ctx.send("done")
-
-
 @client.command(aliases=["np", "newPlayer", "newplayer", "n", "NewPlayer", "Newplayer"])
 async def new_player(ctx, name=None):
-    def check(*reacts):
-        if reacts[0].count > 1:
-            return True
-        return False
-
     if ctx.channel.name != 'new-players':
         return
 
@@ -110,8 +117,36 @@ async def wild_battle(ctx):
     await wildBattle(trainer, ctx, client)
 
 
-@client.command(aliases=["tb"])
-async def trainer_battle(ctx):
+@client.command(aliases=["multiplayerRequestPlayer", "mrp", "MultiplayerRequestPlayer"])
+async def multiplayer_request_player(ctx, member: discord.Member):
+    if ctx.channel.name != "battle-requests":
+        return
+    requestEmbed = discord.Embed(title=f"{ctx.author.name} has challenged you in a battle!",
+                                 description="Go to 'battle-requests' to accept the challenge",
+                                 color=0x45ba36)
+    challengeEmbed = discord.Embed(title=f"{ctx.author.name} has challenged {member.display_name} in a battle!",
+                                   description="Add 👍 to accept and 👎 to decline",
+                                   color=0x45ba36)
+    # await member.send(embed=requestEmbed)
+    challengeEmbedMessage = await ctx.send(embed=challengeEmbed)
+    await challengeEmbedMessage.add_reaction(emoji="👍")
+    await challengeEmbedMessage.add_reaction(emoji="👎")
+    try:
+        await client.wait_for('reaction_add', check=check, timeout=300)
+        challengeEmbedMessageNew = await ctx.channel.fetch_message(challengeEmbedMessage.id)
+        if challengeEmbedMessageNew.reactions[0].count > 1:
+            await ctx.send(embed=await createRooms(ctx, ctx.author, member))
+        else:
+            await ctx.send(f"{member.display_name} has declined your challenge!")
+            await asyncio.sleep(10)
+            await ctx.channel.purge(limit=3)
+    except asyncio.TimeoutError:
+        await ctx.channel.purge(limit=2)
+    return
+
+
+@client.command(aliases=["multiplayerRequest", "mr", "MultiplayerRequest"])
+async def multiplayer_request(ctx):
     if ctx.channel.name != "battle-requests":
         return
     # trainer = Trainer(ctx.message.author.id, 'test')
@@ -123,17 +158,9 @@ async def trainer_battle(ctx):
     # trainer2.addPokemon(pkm2)
     # trainer2 = trainerDict[ctx.message.author.id]
 
-    battleRooms[1]["available"] = False
-    roomsFound = 0
-    selectedRooms = []
-    roomIndex = 0
-    while roomIndex < len(battleRooms) and roomsFound < 2:
-        room = battleRooms[roomIndex]
-        if room["available"]:
-            selectedRooms.append(room)
-            roomsFound += 1
-        roomIndex += 1
-    print(selectedRooms)
+    requestEmbed = discord.Embed(title="", description='', color=0x45ba36)
+
+
 
     # await playerBattle([trainer, trainer2], ctx, client, [selectedRooms[0], selectedRooms[1]])
 
@@ -145,7 +172,10 @@ async def clear(ctx, number):
 
 @client.command(aliases=["Test", "t"])
 async def test(ctx):
-    print(get(ctx.guild.channels, name="room1").id)
+    category = discord.utils.get(ctx.guild.categories, name="Battle Rooms")
+    room = await ctx.guild.create_text_channel(name='test-channel', category=category)
+    await asyncio.sleep(4)
+    await room.delete()
 
 
 client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.-3J4fgmva3h_4k1h7fOxGtsxskg")
