@@ -26,3 +26,7 @@ Mechanics included in the Bot:
     * free-roam
     * battle-requests
 * Run `python3 bot.py` or `py bot.py` on Windows
+
+## Special thanks to:
+
+[PokeAPI](https://pokeapi.co), an easy-to-use database that provides accurate and all information known for almost all Pokémon.
