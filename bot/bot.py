@@ -3,6 +3,7 @@ from discord.ext import commands
 from classes.Pokemon import Pokemon
 from classes.Trainer import Trainer
 from battle.battleDiscord import wildBattle
+from personal_variables.personal_variables import token
 import asyncio
 
 client = commands.Bot(command_prefix="_")
@@ -195,4 +196,4 @@ async def test(ctx):
     await room.delete()
 
 
-client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.-3J4fgmva3h_4k1h7fOxGtsxskg")
+client.run(token)
