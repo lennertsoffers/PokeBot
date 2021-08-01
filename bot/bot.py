@@ -1,11 +1,9 @@
 import discord
 from discord.ext import commands
-from discord.utils import get
 from classes.Pokemon import Pokemon
 from classes.Trainer import Trainer
-from battle.battleDiscord import wildBattle, playerBattle
+from battle.battleDiscord import wildBattle
 import asyncio
-import random
 
 client = commands.Bot(command_prefix="_")
 
@@ -156,16 +154,15 @@ async def multiplayer_request_player(ctx, member: discord.Member):
     return
 
 
-@client.command(aliases=["Ready"])
-async def ready(ctx):
-    found = False
-    if "room" not in ctx.channel.name:
-        return
-    while
-    if ctx.author.id == battleRoom["playerId"]:
-        await ctx.send("start battle")
-    else:
-        await ctx.send("permission denied")
+# @client.command(aliases=["Ready"])
+# async def ready(ctx):
+#     found = False
+#     if "room" not in ctx.channel.name:
+#         return
+#     if ctx.author.id == battleRoom["playerId"]:
+#         await ctx.send("start battle")
+#     else:
+#         await ctx.send("permission denied")
 
 
 # @client.command(aliases=["multiplayerRequest", "mr", "MultiplayerRequest"])

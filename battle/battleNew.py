@@ -2,6 +2,7 @@ import random
 from classes.Pokemon import Pokemon
 import math
 
+
 def moveMenu(trainer):
     moves = trainer.getCarryPokemonList()[0].getMoves()
     moveIndex = 1
