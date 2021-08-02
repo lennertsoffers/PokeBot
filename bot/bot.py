@@ -3,6 +3,7 @@ from discord.ext import commands
 from classes.Pokemon import Pokemon
 from classes.Trainer import Trainer
 from battle.battleDiscord import wildBattle
+from classes.PvP import PvP
 import random
 import asyncio
 
@@ -10,7 +11,7 @@ client = commands.Bot(command_prefix="_")
 
 # Global variables
 trainerDict = {}
-battles = []
+battles = {}
 
 
 def check(*reacts):
@@ -24,18 +25,10 @@ async def createRooms(ctx, challenger, challenged):
 
     roomChallenger = await ctx.guild.create_text_channel(name="room" + str(len(battles) + 1), category=category)
     roomChallenged = await ctx.guild.create_text_channel(name="room" + str(len(battles) + 2), category=category)
-    battles.append({"battleId": len(battles) + 1,
-                    "challengerId": challenger.id,
-                    "challengedId": challenged.id,
-                    "challengerRoom": {"roomName": "room" + str(len(battles) + 1),
-                                       "roomId": roomChallenger.id,
-                                       "ready": False
-                                       },
-                    "challengedRoom": {"roomName": "room" + str(len(battles) + 2),
-                                       "roomId": roomChallenged.id,
-                                       "ready": False
-                                       }
-                    })
+    battles.update({
+        challenger.id: PvP(challenger.id, challenged.id, "room" + str(len(battles) + 1), roomChallenger.id),
+        challenged.id: PvP(challenged.id, challenger.id, "room" + str(len(battles) + 2), roomChallenged.id)
+    })
 
     roomAssignmentEmbed = discord.Embed(title="Room assignment:",
                                         description="Type 'ready' in your assigned room to start the battle",
@@ -44,6 +37,7 @@ async def createRooms(ctx, challenger, challenged):
                                   value=await roomChallenger.create_invite(max_uses=1, unique=True))
     roomAssignmentEmbed.add_field(name=f"{challenged.name}:",
                                   value=await roomChallenged.create_invite(max_uses=1, unique=True))
+    print(battles)
     return roomAssignmentEmbed
 
 
@@ -155,15 +149,22 @@ async def multiplayer_request_player(ctx, member: discord.Member):
     return
 
 
-# @client.command(aliases=["Ready"])
-# async def ready(ctx):
-#     found = False
-#     if "room" not in ctx.channel.name:
-#         return
-#     if ctx.author.id == battleRoom["playerId"]:
-#         await ctx.send("start battle")
-#     else:
-#         await ctx.send("permission denied")
+@client.command(aliases=["Ready"])
+async def ready(ctx):
+    if "room" not in ctx.channel.name:
+        return
+    found = False
+    for battle in battles:
+        if ctx.author.id == battle:
+            PvP_Object = battles[battle]
+            PvP_Object.setReady(True)
+            if battles[PvP_Object.getOpponentId()].isReady():
+                await ctx.send("Time to battle")
+            found = True
+            break
+    if not found:
+        await ctx.send("permission denied")
+
 
 
 # @client.command(aliases=["multiplayerRequest", "mr", "MultiplayerRequest"])
@@ -196,4 +197,4 @@ async def test(ctx):
     await room.delete()
 
 
-client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.gaa0l-1B54uWslnLacUmFVcVvto")
+client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.2kBIxxJpjTLHYxJZpaxA0xaWHgA")
