@@ -614,7 +614,7 @@ async def playerAttackTurn(trainer1, trainer2, ctx, client):
 
 
 async def wildBattle(trainer, ctx, client):
-    wildPokemon = Pokemon(random.randint(1, 500), 1)
+    wildPokemon = Pokemon(random.randint(1, 500), trainer.getCarryPokemonList()[0].getLevel())
     await getPokemonEmbed(ctx, f"{trainer.getName()} uses ", trainer.getCarryPokemonList()[0])
     await getPokemonEmbed(ctx, "Wild pokemon: ", wildPokemon)
     continueTurns = True

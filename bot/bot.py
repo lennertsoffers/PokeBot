@@ -3,7 +3,7 @@ from discord.ext import commands
 from classes.Pokemon import Pokemon
 from classes.Trainer import Trainer
 from battle.battleDiscord import wildBattle
-from personal_variables.personal_variables import token
+import random
 import asyncio
 
 client = commands.Bot(command_prefix="_")
@@ -104,23 +104,23 @@ async def new_player(ctx, name=None):
 async def wild_battle(ctx):
     if ctx.channel.name != 'free-roam':
         return
-    trainer = trainerDict[ctx.message.author.id]
-    # trainer = Trainer(ctx.message.author.id, 'test')
-    # pkm = Pokemon("sandshrew", 40)
-    # pkm1 = Pokemon("turtwig", 100)
-    # pkm2 = Pokemon(random.randint(1, 600), 100)
+    # trainer = trainerDict[ctx.message.author.id]
+    trainer = Trainer(ctx.message.author.id, 'test')
+    pkm = Pokemon(random.randint(1, 600), 30)
+    pkm1 = Pokemon(random.randint(1, 600), 30)
+    pkm2 = Pokemon(random.randint(1, 600), 30)
     # pkm3 = Pokemon(random.randint(1, 600), 100)
     # pkm4 = Pokemon(random.randint(1, 600), 100)
     # pkm5 = Pokemon(random.randint(1, 600), 100)
     # pkm.lowerHp(450)
-    # # pkm1.lowerHp(20)
-    # # pkm2.lowerHp(50)
-    # # pkm3.lowerHp(120)
-    # # pkm4.lowerHp(0)
-    # # pkm5.lowerHp(40)
-    # trainer.addPokemon(pkm)
-    # trainer.addPokemon(pkm1)
-    # trainer.addPokemon(pkm2)
+    # pkm1.lowerHp(20)
+    # pkm2.lowerHp(50)
+    # pkm3.lowerHp(120)
+    # pkm4.lowerHp(0)
+    # pkm5.lowerHp(40)
+    trainer.addPokemon(pkm)
+    trainer.addPokemon(pkm1)
+    trainer.addPokemon(pkm2)
     # trainer.addPokemon(pkm3)
     # trainer.addPokemon(pkm4)
     # trainer.addPokemon(pkm5)
@@ -137,7 +137,7 @@ async def multiplayer_request_player(ctx, member: discord.Member):
     challengeEmbed = discord.Embed(title=f"{ctx.author.name} has challenged {member.display_name} in a battle!",
                                    description="Add 👍 to accept and 👎 to decline",
                                    color=0x45ba36)
-    # await member.send(embed=requestEmbed)
+    await member.send(embed=requestEmbed)
     challengeEmbedMessage = await ctx.send(embed=challengeEmbed)
     await challengeEmbedMessage.add_reaction(emoji="👍")
     await challengeEmbedMessage.add_reaction(emoji="👎")
@@ -196,4 +196,4 @@ async def test(ctx):
     await room.delete()
 
 
-client.run(token)
+client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.gaa0l-1B54uWslnLacUmFVcVvto")
