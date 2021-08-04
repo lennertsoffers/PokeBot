@@ -1,7 +1,7 @@
 
 
 class PvP:
-    def __init__(self, playerId, opponentId, roomName, roomId):
+    def __init__(self, playerId, opponentId, roomName, roomId, challenger=False):
         self.playerId = playerId
         self.opponentId = opponentId
         self.room = {
@@ -9,6 +9,7 @@ class PvP:
             "roomId": roomId
             }
         self.ready = False
+        self.challenger = challenger
 
     def getPlayerId(self):
         return self.playerId
@@ -24,3 +25,6 @@ class PvP:
 
     def setReady(self, ready):
         self.ready = ready
+
+    def isChallenger(self):
+        return self.challenger
