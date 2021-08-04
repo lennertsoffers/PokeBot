@@ -3,6 +3,7 @@ from discord.ext import commands
 from classes.Pokemon import Pokemon
 from classes.Trainer import Trainer
 from battle.battleDiscord import wildBattle
+from battle.battleDiscord import playerBattle
 from classes.PvP import PvP
 import random
 import asyncio
@@ -12,6 +13,7 @@ client = commands.Bot(command_prefix="_")
 # Global variables
 trainerDict = {}
 battles = {}
+roomAssignments = {}
 
 
 def check(*reacts):
@@ -26,7 +28,7 @@ async def createRooms(ctx, challenger, challenged):
     roomChallenger = await ctx.guild.create_text_channel(name="room" + str(len(battles) + 1), category=category)
     roomChallenged = await ctx.guild.create_text_channel(name="room" + str(len(battles) + 2), category=category)
     battles.update({
-        challenger.id: PvP(challenger.id, challenged.id, "room" + str(len(battles) + 1), roomChallenger.id),
+        challenger.id: PvP(challenger.id, challenged.id, "room" + str(len(battles) + 1), roomChallenger.id, True),
         challenged.id: PvP(challenged.id, challenger.id, "room" + str(len(battles) + 2), roomChallenged.id)
     })
 
@@ -37,8 +39,13 @@ async def createRooms(ctx, challenger, challenged):
                                   value=await roomChallenger.create_invite(max_uses=1, unique=True))
     roomAssignmentEmbed.add_field(name=f"{challenged.name}:",
                                   value=await roomChallenged.create_invite(max_uses=1, unique=True))
-    print(battles)
-    return roomAssignmentEmbed
+    global roomAssignments
+    roomAssignments = {
+        "challenger": roomChallenger,
+        "challenged": roomChallenged
+    }
+    await ctx.send(embed=roomAssignmentEmbed)
+    return
 
 
 @client.event
@@ -91,6 +98,7 @@ async def new_player(ctx, name=None):
         trainerCreationFailEmbed = discord.Embed(title="Failed to create trainer!", description="You didn't choose a starter pokemon.", color=0x45ba36)
         trainerCreationFailEmbed.set_footer(text="_"*90)
         await ctx.send(embed=trainerCreationFailEmbed)
+    print(trainerDict)
     return
 
 
@@ -98,27 +106,27 @@ async def new_player(ctx, name=None):
 async def wild_battle(ctx):
     if ctx.channel.name != 'free-roam':
         return
-    # trainer = trainerDict[ctx.message.author.id]
-    trainer = Trainer(ctx.message.author.id, 'test')
-    pkm = Pokemon(random.randint(1, 600), 30)
-    pkm1 = Pokemon(random.randint(1, 600), 30)
-    pkm2 = Pokemon(random.randint(1, 600), 30)
-    # pkm3 = Pokemon(random.randint(1, 600), 100)
-    # pkm4 = Pokemon(random.randint(1, 600), 100)
-    # pkm5 = Pokemon(random.randint(1, 600), 100)
-    # pkm.lowerHp(450)
-    # pkm1.lowerHp(20)
-    # pkm2.lowerHp(50)
-    # pkm3.lowerHp(120)
-    # pkm4.lowerHp(0)
-    # pkm5.lowerHp(40)
-    trainer.addPokemon(pkm)
-    trainer.addPokemon(pkm1)
-    trainer.addPokemon(pkm2)
-    # trainer.addPokemon(pkm3)
-    # trainer.addPokemon(pkm4)
-    # trainer.addPokemon(pkm5)
-    await wildBattle(trainer, ctx, client)
+    # # trainer = trainerDict[ctx.message.author.id]
+    # trainer = Trainer(ctx.message.author.id, 'test')
+    # pkm = Pokemon(random.randint(1, 600), 30)
+    # pkm1 = Pokemon(random.randint(1, 600), 30)
+    # pkm2 = Pokemon(random.randint(1, 600), 30)
+    # # pkm3 = Pokemon(random.randint(1, 600), 100)
+    # # pkm4 = Pokemon(random.randint(1, 600), 100)
+    # # pkm5 = Pokemon(random.randint(1, 600), 100)
+    # # pkm.lowerHp(450)
+    # # pkm1.lowerHp(20)
+    # # pkm2.lowerHp(50)
+    # # pkm3.lowerHp(120)
+    # # pkm4.lowerHp(0)
+    # # pkm5.lowerHp(40)
+    # trainer.addPokemon(pkm)
+    # trainer.addPokemon(pkm1)
+    # trainer.addPokemon(pkm2)
+    # # trainer.addPokemon(pkm3)
+    # # trainer.addPokemon(pkm4)
+    # # trainer.addPokemon(pkm5)
+    # await wildBattle(trainer, ctx, client)
 
 
 @client.command(aliases=["multiplayerRequestPlayer", "mrp", "MultiplayerRequestPlayer"])
@@ -139,7 +147,7 @@ async def multiplayer_request_player(ctx, member: discord.Member):
         await client.wait_for('reaction_add', check=check, timeout=300)
         challengeEmbedMessageNew = await ctx.channel.fetch_message(challengeEmbedMessage.id)
         if challengeEmbedMessageNew.reactions[0].count > 1:
-            await ctx.send(embed=await createRooms(ctx, ctx.author, member))
+            await createRooms(ctx, ctx.author, member)
         else:
             await ctx.send(f"{member.display_name} has declined your challenge!")
             await asyncio.sleep(10)
@@ -147,6 +155,19 @@ async def multiplayer_request_player(ctx, member: discord.Member):
     except asyncio.TimeoutError:
         await ctx.channel.purge(limit=2)
     return
+
+
+@client.command()
+async def setup(ctx):
+    trainer1 = Trainer(391962085531189258, "roonie444")
+    trainer2 = Trainer(834312962491416626, "te")
+    starter1 = Pokemon(1, level=5)
+    starter2 = Pokemon(2, level=5)
+    trainer1.addPokemon(starter1)
+    trainer2.addPokemon(starter2)
+    trainerDict.update({391962085531189258: trainer1})
+    trainerDict.update({834312962491416626: trainer2})
+    print(trainerDict)
 
 
 @client.command(aliases=["Ready"])
@@ -159,29 +180,18 @@ async def ready(ctx):
             PvP_Object = battles[battle]
             PvP_Object.setReady(True)
             if battles[PvP_Object.getOpponentId()].isReady():
-                await ctx.send("Time to battle")
+                if PvP_Object.isChallenger:
+                    print(f"challenger: {PvP_Object.getPlayerId()}/tObject: {trainerDict[PvP_Object.getPlayerId()]}")
+                    print(f"challenged: {battles[PvP_Object.getOpponentId()].getPlayerId()}/tObject: {trainerDict[battles[PvP_Object.getOpponentId()].getPlayerId()]}")
+                    await playerBattle([trainerDict[PvP_Object.getPlayerId()], trainerDict[battles[PvP_Object.getOpponentId()].getPlayerId()]], ctx, client, roomAssignments)
+                else:
+                    print(f"challenger: {battles[PvP_Object.getOpponentId()].getPlayerId()}/tObject: {trainerDict[battles[PvP_Object.getOpponentId()].getPlayerId()]}")
+                    print(f"challenged: {PvP_Object.getPlayerId()}/tObject: {trainerDict[PvP_Object.getPlayerId()]}")
+                    await playerBattle([trainerDict[battles[PvP_Object.getOpponentId()].getPlayerId()], trainerDict[PvP_Object.getPlayerId()]], ctx, client, roomAssignments)
             found = True
             break
     if not found:
         await ctx.send("permission denied")
-
-
-
-# @client.command(aliases=["multiplayerRequest", "mr", "MultiplayerRequest"])
-# async def multiplayer_request(ctx):
-#     if ctx.channel.name != "battle-requests":
-#         return
-    # trainer = Trainer(ctx.message.author.id, 'test')
-    # pkm = Pokemon(random.randint(1, 500), 40)
-    # trainer.addPokemon(pkm)
-    #
-    # trainer2 = Trainer(ctx.message.author.id + 1, 'test2')
-    # pkm2 = Pokemon(random.randint(1, 500), 40)
-    # trainer2.addPokemon(pkm2)
-    # trainer2 = trainerDict[ctx.message.author.id]
-
-    # requestEmbed = discord.Embed(title="", description='', color=0x45ba36)
-    # await playerBattle([trainer, trainer2], ctx, client, [selectedRooms[0], selectedRooms[1]])
 
 
 @client.command(aliases=["c", "C", "Clear", "CLEAR"])
@@ -197,4 +207,4 @@ async def test(ctx):
     await room.delete()
 
 
-client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.2kBIxxJpjTLHYxJZpaxA0xaWHgA")
+client.run("ODMwMTM4Mjg1NjQ0ODQxMDEw.YHCUhg.dPeUoJhCSr5qy946PwHCpHw-SUE")

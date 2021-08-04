@@ -1,5 +1,6 @@
 import random
 from classes.Pokemon import Pokemon
+from discord.utils import get
 import math
 import discord
 import asyncio
@@ -53,7 +54,7 @@ async def sendFaintedEmbed(ctx, pokemon):
     await ctx.send(embed=embed)
 
 
-async def getPokemonEmbed(ctx, textBefore="", *args):
+def getPokemonEmbed(textBefore="", *args):
     for pokemon in args:
         embed = discord.Embed(title=textBefore + pokemon.getName(), description=f"HP: {getHpInHearts(pokemon)}", color=0x45ba36)
         embed.add_field(name="Level:", value=pokemon.getLevel(), inline=True)
@@ -61,7 +62,6 @@ async def getPokemonEmbed(ctx, textBefore="", *args):
         # if statusEffect != "":
         #     embed.add_field(name="Status", value=statusEffect)
         embed.set_thumbnail(url=pokemon.getSprite())
-        await ctx.send(embed=embed)
         global messages
         messages += 1
 
@@ -615,22 +615,22 @@ async def playerAttackTurn(trainer1, trainer2, ctx, client):
 
 async def wildBattle(trainer, ctx, client):
     wildPokemon = Pokemon(random.randint(1, 500), trainer.getCarryPokemonList()[0].getLevel())
-    await getPokemonEmbed(ctx, f"{trainer.getName()} uses ", trainer.getCarryPokemonList()[0])
-    await getPokemonEmbed(ctx, "Wild pokemon: ", wildPokemon)
+    await ctx.send(embed=getPokemonEmbed(f"{trainer.getName()} uses ", trainer.getCarryPokemonList()[0]))
+    await ctx.send(embed=getPokemonEmbed("Wild pokemon: ", wildPokemon))
     continueTurns = True
     await asyncio.sleep(5)
     while wildPokemon.getHp() > 0 and 0 < any(pkm.getHp() for pkm in trainer.getCarryPokemonList()) and continueTurns:
         global messages
         await ctx.channel.purge(limit=int(messages))
         messages = 0
-        await getPokemonEmbed(ctx, "", trainer.getCarryPokemonList()[0], wildPokemon)
+        await ctx.send(embed=getPokemonEmbed(ctx, "", trainer.getCarryPokemonList()[0], wildPokemon))
         continueTurns = await wildAttackTurn(trainer, wildPokemon, ctx, client)
         await asyncio.sleep(3)
 
 
-async def playerBattle(players, ctx, client, rooms):
-    for player in players:
-        print(player.getName(), "uses", player.getCarryPokemonList()[0].getName())
+async def playerBattle(players, ctx, client, roomAssignments):
+    await roomAssignments["challenger"].send(embed=getPokemonEmbed(ctx, f"{players[0].getName()} uses ", players[0].getCarryPokemonList()[0]))
+    await roomAssignments["challenged"].send(embed=getPokemonEmbed(ctx, f"{players[1].getName()} uses ", players[1].getCarryPokemonList()[0]))
     while 0 < any(pkm.getHp() for pkm in players[0].getCarryPokemonList()) and 0 < any(pkm.getHp() for pkm in players[1].getCarryPokemonList()):
         await playerAttackTurn(players[0], players[1], ctx, client)
 
